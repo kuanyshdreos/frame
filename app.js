@@ -1871,7 +1871,7 @@ function updateSyncBanner(state){
   }
   if(!Backend.getConfig()){
     banner.className="sync-banner warn";
-    icon.textContent="⚠";text.textContent="Изменения только в этом браузере. Посетители видят старое.";
+    icon.textContent="⚠";text.textContent="ВНИМАНИЕ: Изменения видны ТОЛЬКО ВАМ. Для всех остальных сайт остался старым.";
     action.style.display="";action.textContent="Подключить Supabase →";action.onclick=goBackend;return;
   }
   if(!Backend.client||!Backend.user){
@@ -1921,7 +1921,8 @@ insert into site_data (id, data) values (1, '{}'::jsonb)
           </div>
         </div>
         <div style="display:flex; gap:8px">
-          <button class="btn" onclick="(async()=>{const ok=await Backend.init(); showToast(ok?'✅ Соединение активно':'❌ Ошибка подключения'); renderAdmin();})()">🔄 Проверить</button>
+          <button class="btn" title="Переподключиться" onclick="(async()=>{const btn=this;btn.textContent='...';const ok=await Backend.init();btn.textContent='🔄 Проверить';showToast(ok?'✅ Соединение активно':'❌ Ошибка подключения');renderAdmin();})()">🔄 Проверить</button>
+          ${isAuth ? `<button class="btn primary" title="Отправить локальные изменения в облако сейчас" onclick="(async()=>{const btn=this;const old=btn.textContent;btn.textContent='Отправка...';const res=await Backend.save(DATA);btn.textContent=old;showToast(res.ok?'✅ Успешно синхронизировано':'❌ Ошибка: '+res.error);})()">📤 Отправить в облако</button>` : ''}
           ${!isConnected ? `<button class="btn primary" onclick="Backend.showWizard()">🚀 Запустить мастер настройки</button>` : ''}
         </div>
       </div>
