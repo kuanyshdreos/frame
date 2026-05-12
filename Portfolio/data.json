@@ -1,0 +1,114 @@
+{
+  "site": {
+    "name": "FRAME",
+    "email": "hello@frame.studio",
+    "phone": "+7 777 123 45 67",
+    "introWords": ["Cinematic", "Stories", "Frame"],
+    "location": { "en": "Almaty / Worldwide", "ru": "Алматы / Весь мир", "kk": "Алматы / Бүкіл әлем" },
+    "footerCta": { "en": "Let's work {em}together{/em}", "ru": "Давайте работать {em}вместе{/em}", "kk": "Бірге {em}жұмыс{/em} істейік" },
+    "socials": [
+      { "name": "Instagram", "url": "https://instagram.com/frame.studio" },
+      { "name": "Vimeo", "url": "https://vimeo.com/framestudio" },
+      { "name": "Telegram", "url": "https://t.me/framestudio" }
+    ],
+    "adminPasswordHash": "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918"
+  },
+  "hero": { "featuredId": "p1" },
+  "projects": [
+    {
+      "id": "p1",
+      "title": { "en": "The People We Love", "ru": "Люди которых мы любим", "kk": "Біз сүйетін адамдар" },
+      "summary": { "en": "A cinematic brand film exploring human connection and the stories that bind us together.", "ru": "Кинематографичный бренд-фильм о человеческих связях и историях, которые нас объединяют.", "kk": "Адам байланыстары мен бізді біріктіретін оқиғалар туралы кинематографиялық бренд-фильм." },
+      "client": "Kaspi.kz",
+      "cover": "https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?w=1200&q=80",
+      "videoUrl": "https://vimeo.com/824804225",
+      "year": "2025",
+      "runtime": "02:48",
+      "category": "commercials"
+    },
+    {
+      "id": "p2",
+      "title": { "en": "Midnight in Almaty", "ru": "Полночь в Алматы", "kk": "Алматыдағы түн ортасы" },
+      "summary": { "en": "A personal short film capturing the quiet beauty of the city after dark.", "ru": "Личный короткометражный фильм о тихой красоте ночного города.", "kk": "Түнгі қаланың тыныш сұлулығы туралы жеке қысқа фильм." },
+      "client": "Personal",
+      "cover": "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=1200&q=80",
+      "videoUrl": "https://vimeo.com/824804225",
+      "year": "2024",
+      "runtime": "04:12",
+      "category": "personal"
+    },
+    {
+      "id": "p3",
+      "title": { "en": "Golden Hour", "ru": "Золотой час", "kk": "Алтын сағат" },
+      "summary": { "en": "Wedding film shot entirely during golden hour across the mountains of Almaty region.", "ru": "Свадебный фильм, полностью снятый в золотой час в горах Алматинской области.", "kk": "Алматы облысы тауларында алтын сағатта толық түсірілген үйлену тойы фильмі." },
+      "client": "Arman & Dina",
+      "cover": "https://images.unsplash.com/photo-1519741497674-611481863552?w=1200&q=80",
+      "videoUrl": "https://vimeo.com/824804225",
+      "year": "2025",
+      "runtime": "06:30",
+      "category": "stories"
+    },
+    {
+      "id": "p4",
+      "title": { "en": "Drive Forward", "ru": "Двигайся вперёд", "kk": "Алға жүр" },
+      "summary": { "en": "Commercial campaign for a leading automotive brand, blending speed with elegance.", "ru": "Рекламная кампания для ведущего автомобильного бренда — скорость и элегантность.", "kk": "Жетекші автомобиль бренді үшін жарнамалық науқан — жылдамдық пен сәнділік." },
+      "client": "BMW Kazakhstan",
+      "cover": "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=1200&q=80",
+      "videoUrl": "https://vimeo.com/824804225",
+      "year": "2024",
+      "runtime": "01:00",
+      "category": "commercials"
+    },
+    {
+      "id": "p5",
+      "title": { "en": "Silk Road", "ru": "Шёлковый путь", "kk": "Жібек жолы" },
+      "summary": { "en": "Documentary-style brand film for a luxury travel company exploring Central Asia.", "ru": "Документальный бренд-фильм для люксовой туркомпании по Центральной Азии.", "kk": "Орталық Азияны зерттейтін люкс туристік компания үшін деректі бренд-фильм." },
+      "client": "Nomad Luxury",
+      "cover": "https://images.unsplash.com/photo-1682687220742-aba13b6e50ba?w=1200&q=80",
+      "videoUrl": "https://vimeo.com/824804225",
+      "year": "2025",
+      "runtime": "03:45",
+      "category": "stories"
+    },
+    {
+      "id": "p6",
+      "title": { "en": "Sound of the City", "ru": "Звук города", "kk": "Қала дыбысы" },
+      "summary": { "en": "Music video for emerging Kazakh artist, filmed across urban landscapes.", "ru": "Музыкальный клип для начинающего казахстанского артиста в городских пейзажах.", "kk": "Қала көріністерінде түсірілген жас қазақстандық әртіске арналған музыкалық клип." },
+      "client": "Miras Music",
+      "cover": "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=1200&q=80",
+      "videoUrl": "https://vimeo.com/824804225",
+      "year": "2024",
+      "runtime": "03:22",
+      "category": "personal"
+    }
+  ],
+  "pricing": {
+    "headline": { "en": "Investment", "ru": "Стоимость", "kk": "Құны" },
+    "sub": { "en": "Tailored to your vision", "ru": "Под ваше видение", "kk": "Сіздің көзқарасыңызға сай" },
+    "currency": { "en": "₸" },
+    "packages": [
+      {
+        "name": { "en": "Essential", "ru": "Базовый", "kk": "Базалық" },
+        "desc": { "en": "Perfect for startups and small brands", "ru": "Идеально для стартапов и малого бизнеса", "kk": "Стартаптар мен шағын бизнес үшін" },
+        "price": { "en": "350 000" },
+        "features": { "en": ["1 shooting day", "Up to 60s final cut", "Color grading", "Licensed music", "2 revision rounds"] },
+        "featured": false
+      },
+      {
+        "name": { "en": "Studio", "ru": "Студийный", "kk": "Студиялық" },
+        "desc": { "en": "Our most popular package for brands", "ru": "Самый популярный пакет для брендов", "kk": "Брендтер үшін ең танымал пакет" },
+        "price": { "en": "750 000" },
+        "badge": { "en": "Popular", "ru": "Популярный", "kk": "Танымал" },
+        "features": { "en": ["2 shooting days", "Up to 3min final cut", "Advanced color grading", "Custom sound design", "Social media cuts", "Unlimited revisions"] },
+        "featured": true
+      },
+      {
+        "name": { "en": "Cinema", "ru": "Кино", "kk": "Кино" },
+        "desc": { "en": "Full-scale production for premium brands", "ru": "Полноценное производство для премиум-брендов", "kk": "Премиум брендтер үшін толық өндіріс" },
+        "price": { "en": "1 500 000" },
+        "features": { "en": ["3+ shooting days", "Full narrative direction", "Cinematic color grade", "Original score", "4K delivery", "BTS content", "Full rights transfer"] },
+        "featured": false
+      }
+    ]
+  }
+}
