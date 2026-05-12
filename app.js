@@ -63,7 +63,7 @@ const Backend={
 window.Backend=Backend;
 
 function esc(s){return s?String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"):""}
-function gl(o){if(!o)return "";if(typeof o==="string")return o;return o[currentLang]||o.en||""}
+function gl(o){if(!o)return "";if(typeof o==="string")return o;return o[currentLang]||o.en||o.ru||o.kk||""}
 function uid(){return Math.random().toString(36).substr(2,9)}
 function toEmbed(url){
   if(!url)return null;
@@ -1238,6 +1238,55 @@ function renderProjectEditor(){
 
 window.deleteProject=function(id){DATA.projects=(DATA.projects||[]).filter(x=>x.id!==id);editingProjectId=null;saveData();render();renderAdmin();render();};
 
+window.recoverAdminPassword=async function(){
+  const DEFAULT_HASH="8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918";
+  // Если Supabase не подключён — даём инструкцию для Table Editor
+  if(!Backend.getConfig()){
+    alert(
+      "Supabase не подключён. Чтобы восстановить пароль:\n\n"+
+      "1. Открой Supabase Dashboard → Table Editor\n"+
+      "2. Таблица site_data → строка id=1 → колонка data\n"+
+      "3. В JSON замени значение adminPasswordHash на:\n"+
+      DEFAULT_HASH+"\n\n"+
+      "4. Save → перезагрузи сайт\n"+
+      "5. Пароль будет: password"
+    );
+    return;
+  }
+  // Инициализируем Supabase если ещё нет
+  if(!Backend.client){await Backend.init();}
+  // Проверяем авторизацию
+  if(!Backend.user){
+    const email=prompt("Войди в Supabase для сброса пароля.\n\nEmail:");
+    if(!email)return;
+    const password=prompt("Пароль Supabase:");
+    if(!password)return;
+    showToast("🔑 Вход в Supabase…");
+    const r=await Backend.signIn(email,password);
+    if(r.error||!Backend.user){
+      showToast("Ошибка: "+(r.error&&r.error.message||"вход не удался"));
+      return;
+    }
+  }
+  // Авторизованы — обнуляем хеш
+  if(!confirm("Сбросить пароль админки до 'password'?\nПосле входа сразу смени его."))return;
+  if(!DATA.site)DATA.site={};
+  DATA.site.adminPasswordHash=DEFAULT_HASH;
+  // Сохраняем локально + в облако
+  localStorage.setItem("frame_data",JSON.stringify(DATA));
+  const res=await Backend.save(DATA);
+  if(res.ok){
+    showToast("✅ Пароль сброшен. Войди с 'password' и сразу смени!");
+    const pw=document.getElementById("admin-password");
+    if(pw){pw.value="password";pw.focus();}
+    // также сбрасываем лимит попыток
+    localStorage.removeItem("frame_login_attempts");
+    localStorage.removeItem("frame_login_lock");
+  } else {
+    showToast("Ошибка сохранения: "+res.error);
+  }
+};
+
 window.changeAdminPassword=async function(){
   const a=document.getElementById("new-admin-pw"),b=document.getElementById("new-admin-pw2");
   if(!a||!b)return;
@@ -1923,6 +1972,12 @@ document.addEventListener("click",e=>{
   if(e.target.id==="admin-trigger"){
     const lm=document.getElementById("login-modal");if(lm)lm.classList.add("show");return;
   }
+  // forgot password recovery
+  if(e.target.id==="forgot-pw-link"){
+    e.preventDefault();
+    recoverAdminPassword();
+    return;
+  }
   // login submit
   if(e.target.id==="admin-login-btn"){
     const lockUntil=parseInt(localStorage.getItem("frame_login_lock")||"0");
@@ -2049,8 +2104,16 @@ document.addEventListener("click",e=>{
 });
 
 
-// clock
-setInterval(()=>{const c=document.querySelector("[data-clock]");if(c){const n=new Date();c.textContent=[n.getHours(),n.getMinutes(),n.getSeconds()].map(x=>String(x).padStart(2,"0")).join(":");}},1000);
+// clock — обновляет ВСЕ элементы с data-clock (интро + навбар)
+function tickClocks(){
+  const clocks=document.querySelectorAll("[data-clock]");
+  if(!clocks.length)return;
+  const n=new Date();
+  const time=[n.getHours(),n.getMinutes(),n.getSeconds()].map(x=>String(x).padStart(2,"0")).join(":");
+  clocks.forEach(c=>{c.textContent=time;});
+}
+tickClocks();
+setInterval(tickClocks,1000);
 
 // reveal
 const ro=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add("in");}),{threshold:.15});

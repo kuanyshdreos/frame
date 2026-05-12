@@ -50,6 +50,8 @@
   .nav-l a{position:relative;padding:6px 0}
   .nav-c{font-family:'Inter', sans-serif;font-size:13px;letter-spacing:0}
   .nav-r{display:flex;justify-content:flex-end;gap:22px;align-items:center}
+  .nav-clock{font-size:11px;letter-spacing:.08em;font-variant-numeric:tabular-nums;color:inherit;opacity:.65;font-weight:400}
+  @media(max-width:760px){.nav-clock{display:none}}
   .lang-pill{display:flex;gap:2px;font-size:11px;letter-spacing:.16em;text-transform:uppercase}
   .lang-pill button{opacity:.4;padding:4px 6px;transition:opacity .3s}
   .lang-pill button.on,.lang-pill button:hover{opacity:1}
@@ -640,29 +642,45 @@
     .ap-side{width:100%;flex-direction:row;overflow-x:auto;overflow-y:hidden;padding:0;border-right:none;border-bottom:1px solid var(--line);flex-shrink:0;scrollbar-width:none;-webkit-overflow-scrolling:touch}
     .ap-side::-webkit-scrollbar{display:none}
     .ap-brand{display:none}
-    .ap-tab{flex-shrink:0;border-left:none;border-bottom:2px solid transparent;padding:14px 16px;font-size:12px;white-space:nowrap;gap:8px}
+    .ap-tab{flex-shrink:0;border-left:none;border-bottom:2px solid transparent;padding:14px 16px;font-size:12px;white-space:nowrap;gap:8px;min-height:44px}
     .ap-tab.active{border-left:none;border-bottom-color:var(--ink);background:transparent}
     .ap-tab .ic{display:none}
     .ap-side-bottom{display:none}
-    .ap-bar{padding:14px 16px;flex-wrap:wrap;gap:10px}
-    .ap-bar h2{font-size:18px;flex:1;min-width:0}
-    .ap-actions{flex-wrap:wrap;gap:6px;width:100%;justify-content:flex-end}
-    .ap-actions .btn{padding:9px 14px;font-size:10px}
-    .ap-status{width:100%;text-align:right;margin:0}
-    .ap-content{padding:22px 16px 80px}
+    .ap-bar{padding:12px 14px;flex-wrap:wrap;gap:8px;position:sticky;top:0;background:var(--bg);z-index:10}
+    .ap-bar h2{font-size:17px;flex:1;min-width:0;margin:0}
+    .ap-actions{flex-wrap:wrap;gap:6px;width:100%;justify-content:flex-start;order:2}
+    .ap-actions .btn{padding:10px 12px;font-size:10px;flex:1;min-width:90px;text-align:center;letter-spacing:.08em}
+    .ap-actions .btn.ghost{flex:0;min-width:auto}
+    .ap-status{display:none}
+    .ap-content{padding:20px 14px 80px}
     .ap-section{max-width:none}
-    .group{padding:18px 16px}
+    .ap-section h3{font-size:20px}
+    .ap-section p.muted{font-size:12px}
+    .group{padding:16px 14px;border-radius:10px}
+    .group h4{font-size:13px;flex-wrap:wrap;gap:8px}
     .field-row,.field-row.x2{grid-template-columns:1fr;gap:10px}
-    .ap-project-row{grid-template-columns:24px 60px 1fr;gap:10px;padding:8px}
-    .ap-project-row .thumb{width:60px}
-    .ap-project-row > button{grid-column:1/-1;justify-self:start}
+    .field input,.field textarea,.field select{font-size:16px;padding:14px}
+    .field textarea{min-height:80px}
+    .field label{font-size:11px}
+    .ap-project-row{grid-template-columns:20px 56px 1fr;gap:10px;padding:10px;align-items:start}
+    .ap-project-row .thumb{width:56px;aspect-ratio:16/10}
+    .ap-project-row .name{font-size:14px;line-height:1.25}
+    .ap-project-row .meta{font-size:10px}
+    .ap-project-row > button{grid-column:1/-1;justify-self:stretch;text-align:center;margin-top:6px}
+    .toggle-pill{padding:10px 14px;font-size:12px}
   }
   @media(max-width:480px){
-    .ap-tab{padding:12px 12px;font-size:11px}
-    .ap-bar{padding:12px}
-    .ap-content{padding:18px 12px 60px}
+    .ap-tab{padding:12px 10px;font-size:11px}
+    .ap-bar{padding:10px 12px;gap:6px}
+    .ap-bar h2{font-size:15px}
+    .ap-actions{gap:4px}
+    .ap-actions .btn{padding:9px 8px;font-size:9px;min-width:74px;letter-spacing:.04em}
+    .ap-content{padding:16px 10px 60px}
     .group{padding:14px 12px}
+    .group h4{font-size:12px}
     .stat-row,.list-row,.social-row{grid-template-columns:1fr;gap:6px}
+    .stat-row .x,.list-row .x,.social-row .x{justify-self:end;width:auto;padding:8px 16px}
+    .field input,.field textarea{padding:12px}
   }
   .ap-section{max-width:880px;margin:0 auto}
   .ap-section h3{font-family:'Inter', sans-serif;font-size:24px;margin-bottom:6px;font-weight:400;letter-spacing:0}
