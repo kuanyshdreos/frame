@@ -95,8 +95,8 @@
   .dp-typo{padding:30px 24px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:24px;position:relative;z-index:2}
   .dp-title{font-family:'Inter','Helvetica Neue','Arial',sans-serif;font-weight:900;font-size:clamp(54px,8.5vw,160px);line-height:.88;letter-spacing:-.045em;text-transform:uppercase;margin:0;color:#fff;hyphens:none;overflow-wrap:break-word;width:100%}
   .dp-title-prefix{display:block;line-height:.9;word-spacing:-.04em}
-  .dp-title-rotator{display:block;position:relative;height:.92em;overflow:hidden;margin-top:.04em}
-  .dp-rot-word{position:absolute;left:0;top:0;width:100%;text-align:center;opacity:0;transform:translateY(70%);will-change:transform,opacity;color:#fff;pointer-events:none;transition:opacity .25s ease,transform .5s var(--ease)}
+  .dp-title-rotator{display:block;position:relative;height:.92em;overflow:hidden;margin-top:14px}
+  .dp-rot-word{position:absolute;left:0;top:0;width:100%;text-align:center;opacity:0;transform:translateY(70%);will-change:transform,opacity;color:rgba(255,255,255,0.75);font-style:italic;pointer-events:none;transition:opacity .25s ease,transform .5s var(--ease)}
   .dp-rot-word.active{opacity:1;transform:translateY(0);transition:opacity .5s var(--ease) .12s,transform .65s var(--ease)}
   .dp-rot-word.exit{opacity:0;transform:translateY(-70%);transition:opacity .25s ease,transform .5s var(--ease)}
   .dp-tagline{font-family:'Inter','Helvetica Neue','Arial',sans-serif;font-weight:700;text-transform:uppercase;font-size:13px;letter-spacing:.01em;line-height:1.35;max-width:38ch;margin:0;color:rgba(255,255,255,.55)}
