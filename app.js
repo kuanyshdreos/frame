@@ -115,13 +115,19 @@ const Backend={
       return data?data.data:null;
     }catch(e){console.warn(e);return null;}
   },
-  async save(d){
-    if(!this.enabled||!this.client)return{ok:false,error:"Не авторизован"};
-    try{
-      const {error}=await this.client.from("site_data").upsert({id:1,data:d,updated_at:new Date().toISOString()},{onConflict:"id"});
-      if(error)return{ok:false,error:error.message};
-      return{ok:true};
     }catch(e){return{ok:false,error:e.message};}
+  },
+  subscribe(callback){
+    if(!this.client||!this.enabled)return;
+    // Note: This requires 'Realtime' to be enabled for the 'site_data' table in Supabase dashboard
+    this.client.channel('public:site_data')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'site_data', filter: 'id=eq.1' }, payload => {
+        if(payload.new && payload.new.data) {
+          console.log('☁ Cloud update received');
+          callback(payload.new.data);
+        }
+      })
+      .subscribe();
   }
 };
 window.Backend=Backend;
@@ -138,13 +144,20 @@ function toEmbed(url){
 async function loadData(){
   // 1. Грузим data.json (всегда доступен как статика на Vercel)
   let bootData=null;
-  try{const r=await fetch("data.json?v="+Date.now());if(r.ok)bootData=await r.json();}catch(e){}
+  try{
+    const r=await fetch("data.json?v="+Date.now(), { cache: 'no-store' });
+    if(r.ok)bootData=await r.json();
+  }catch(e){}
 
   // 2. Если в data.json есть публичный Supabase конфиг — гидрируем им Backend
   // (это позволяет ЛЮБОМУ посетителю подтянуть свежие данные из облака)
   const pub=bootData&&bootData.site&&bootData.site.publicBackend;
-  if(pub&&pub.url&&pub.key&&!localStorage.getItem("frame_backend")){
-    localStorage.setItem("frame_backend",JSON.stringify({url:pub.url,key:pub.key}));
+  if(pub&&pub.url&&pub.key){
+    const currentCfg = Backend.getConfig();
+    if (!currentCfg || currentCfg.url !== pub.url || currentCfg.key !== pub.key) {
+      console.log("Updating backend config from data.json");
+      localStorage.setItem("frame_backend",JSON.stringify({url:pub.url,key:pub.key}));
+    }
   }
 
   // 3. Пробуем подтянуть свежие данные из Supabase
@@ -160,10 +173,19 @@ async function loadData(){
   }catch(e){console.warn("Backend load skipped:",e);}
 
   // 4. Fallback: data.json (свежий с сервера)
-  if(bootData)return bootData;
+  if(bootData) {
+    localStorage.setItem("frame_data", JSON.stringify(bootData));
+    return bootData;
+  }
 
   // 5. Fallback: localStorage
-  try{const l=localStorage.getItem("frame_data");if(l)return JSON.parse(l);}catch(e){}
+  try{
+    const l=localStorage.getItem("frame_data");
+    if(l) {
+      const parsed = JSON.parse(l);
+      if (parsed && typeof parsed === "object") return parsed;
+    }
+  }catch(e){}
 
   // 6. Default empty
   return {site:{name:"FRAME",email:"hello@frame.studio",phone:"+7 777 000 00 00",introWords:["Cinematic","Stories","Frame"],socials:[]},hero:{featuredId:""},projects:[],pricing:{headline:{en:"Pricing",ru:"Цены",kk:"Бағалар"},sub:{en:"Bespoke solutions",ru:"Индивидуальный подход",kk:"Жеке тәсіл"},currency:{en:"$"},packages:[]}};
@@ -1340,12 +1362,33 @@ window.deleteProject=function(id){DATA.projects=(DATA.projects||[]).filter(x=>x.
 
 function doAdminLogin(){
   const pw=document.getElementById("admin-password");
-  const errEl=document.getElementById("login-error");
   const modal=document.querySelector("#login-modal .modal");
+  // Получаем или создаём элемент ошибки (на случай устаревшего HTML)
+  let errEl=document.getElementById("login-error");
+  if(!errEl&&modal){
+    errEl=document.createElement("div");
+    errEl.id="login-error";
+    errEl.className="login-error";
+    // Инлайн-стили — работают даже если CSS не задеплоен
+    errEl.style.cssText="display:none;font-size:13px;font-weight:500;color:#a31c1c;background:rgba(163,28,28,.1);border:1px solid rgba(163,28,28,.35);padding:12px 16px;border-radius:8px;margin-top:14px;letter-spacing:.02em;line-height:1.4";
+    const actions=modal.querySelector(".modal-actions");
+    if(actions)modal.insertBefore(errEl,actions);else modal.appendChild(errEl);
+  }
   const showErr=(msg)=>{
-    if(errEl){errEl.textContent=msg;errEl.classList.add("show");}
+    if(errEl){
+      errEl.textContent=msg;
+      errEl.style.display="block";
+      errEl.classList.add("show");
+      // принудительный repaint для гарантии видимости
+      void errEl.offsetWidth;
+    }
+    // Дублируем тостом — гарантированно видно
+    showToast(msg);
     if(modal){modal.classList.remove("shake");void modal.offsetWidth;modal.classList.add("shake");}
     if(pw){pw.value="";pw.focus();}
+  };
+  const hideErr=()=>{
+    if(errEl){errEl.classList.remove("show");errEl.style.display="none";errEl.textContent="";}
   };
   const lockUntil=parseInt(localStorage.getItem("frame_login_lock")||"0");
   if(Date.now()<lockUntil){
@@ -2205,7 +2248,14 @@ document.addEventListener("click",e=>{
   if(e.target.id==="btn-publish"){
     const blob=new Blob([JSON.stringify(DATA,null,2)],{type:"application/json"});
     const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="data.json";a.click();
-    showToast("data.json скачан");return;
+    showToast("✅ data.json скачан. Загрузите его на GitHub/Vercel для обновления статики.");return;
+  }
+  // force refresh
+  if(e.target.id==="btn-refresh-site"){
+    if(confirm("Принудительно обновить сайт и очистить кэш?")){
+      location.href = location.origin + location.pathname + "?v=" + Date.now();
+    }
+    return;
   }
   // import
   if(e.target.id==="btn-import"){document.getElementById("import-file").click();return;}
@@ -2376,6 +2426,19 @@ const CORRECT_HASH="8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448
   applyLang(currentLang);
   applyEnabledLangs();
   route();
+
+  // Realtime sync for other devices
+  if(Backend.enabled) {
+    Backend.subscribe((newData) => {
+      // Только если мы не в режиме редактирования (чтобы не затереть изменения админа)
+      if(!isAdmin) {
+        DATA = newData;
+        localStorage.setItem("frame_data", JSON.stringify(DATA));
+        render();
+        showToast("☁ Сайт обновлен (получены новые данные)");
+      }
+    });
+  }
   // если включён только один язык — пропускаем интро автоматически
   const enabled=getEnabledLangs();
   if(enabled.length<=1){

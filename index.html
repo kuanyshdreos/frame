@@ -5,8 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="theme-color" content="#f4f1ec" />
 <meta name="referrer" content="strict-origin-when-cross-origin" />
-<meta http-equiv="X-Content-Type-Options" content="nosniff" />
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https: blob:; frame-src https://player.vimeo.com https://www.youtube.com https://www.youtube-nocookie.com; connect-src 'self' https://api.mymemory.translated.net https://vimeo.com https://noembed.com https://*.supabase.co wss://*.supabase.co; media-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'self'" />
+  <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https: blob:; frame-src https://player.vimeo.com https://www.youtube.com https://www.youtube-nocookie.com; connect-src 'self' https://api.mymemory.translated.net https://vimeo.com https://noembed.com https://*.supabase.co wss://*.supabase.co; media-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'self'" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(regs) {
+        for(let r of regs) { r.unregister(); }
+      });
+    }
+  </script>
 <meta name="description" content="FRAME — A boutique film and video production studio based in Almaty, working worldwide. Specializing in brand films, weddings, and music videos." />
 <meta property="og:title" content="FRAME — Studio" />
 <meta property="og:description" content="A studio of one — and a small circle of trusted collaborators. We tell stories with cinema in mind." />
@@ -259,9 +269,10 @@
       <div class="ap-actions">
         <span class="ap-status" id="ap-status">Ready</span>
         <button class="btn" id="btn-translate-all" title="Перевести все RU поля на текущей вкладке">🌐 Перевести всё</button>
+        <button class="btn" id="btn-refresh-site" title="Принудительно обновить кэш сайта на этом устройстве">🔄 Обновить кэш</button>
         <button class="btn" id="btn-import">Import JSON</button>
         <input type="file" id="import-file" accept="application/json" style="display:none" />
-        <button class="btn" id="btn-publish">Publish ↓</button>
+        <button class="btn" id="btn-publish" title="Скачать data.json для обновления статической версии">Publish ↓</button>
         <button class="btn primary" id="btn-preview">Preview ↗</button>
         <button class="btn ghost" id="btn-close-admin">Close ✕</button>
       </div>
