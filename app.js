@@ -22,7 +22,11 @@ const Backend={
   setConfig(url,key){localStorage.setItem("frame_backend",JSON.stringify({url,key}));},
   clearConfig(){localStorage.removeItem("frame_backend");this.client=null;this.user=null;this.enabled=false;},
   async init(){
-    const cfg=this.getConfig();if(!cfg||!cfg.url||!cfg.key)return false;
+    const cfg=this.getConfig();
+    if(!cfg||!cfg.url||!cfg.key){
+      // Если мы в админке или пытаемся загрузить данные, и конфига нет — можем показать визард
+      return false;
+    }
     try{
       await this._loadSDK();
       this.client=window.supabase.createClient(cfg.url,cfg.key,{auth:{persistSession:true,autoRefreshToken:true}});
@@ -30,6 +34,60 @@ const Backend={
       if(data&&data.session){this.user=data.session.user;this.enabled=true;}
       return true;
     }catch(e){console.warn("Backend init failed:",e);return false;}
+  },
+  showWizard(){
+    if(document.getElementById("setup-wizard"))return;
+    const div=document.createElement("div");
+    div.id="setup-wizard";
+    div.className="modal-backdrop show";
+    div.style.zIndex="10001";
+    div.innerHTML=`
+      <div class="modal setup-card">
+        <div class="setup-icon">☁</div>
+        <h3>Настройка облака</h3>
+        <p class="sub">Похоже, Supabase еще не подключен. Введите данные вашего проекта, чтобы синхронизировать портфолио.</p>
+        
+        <div class="field">
+          <label>Supabase URL</label>
+          <input type="text" id="wiz-url" placeholder="https://xxxxx.supabase.co" value="${this.getConfig()?.url||''}">
+        </div>
+        
+        <div class="field">
+          <label>Anon Public Key</label>
+          <input type="password" id="wiz-key" placeholder="eyJhbGciOiJIUzI1Ni..." value="${this.getConfig()?.key||''}">
+        </div>
+        
+        <div class="setup-actions">
+          <button class="btn primary full" id="wiz-save">Подключить облако</button>
+          <button class="btn ghost full" id="wiz-skip">Позже (локально)</button>
+        </div>
+        
+        <div class="setup-help">
+          Где взять эти данные? <a href="https://supabase.com/dashboard" target="_blank">Supabase Dashboard</a> → Project Settings → API
+        </div>
+      </div>
+    `;
+    document.body.appendChild(div);
+    
+    div.querySelector("#wiz-save").onclick=async()=>{
+      const u=div.querySelector("#wiz-url").value.trim();
+      const k=div.querySelector("#wiz-key").value.trim();
+      if(!u||!k){showToast("Заполните оба поля");return;}
+      
+      div.querySelector("#wiz-save").textContent="Проверка...";
+      this.setConfig(u,k);
+      const ok=await this.init();
+      
+      if(ok){
+        showToast("✅ Успешно подключено!");
+        div.remove();
+        location.reload(); // Перезагружаем для чистого старта
+      } else {
+        showToast("❌ Ошибка подключения. Проверьте данные.");
+        div.querySelector("#wiz-save").textContent="Подключить облако";
+      }
+    };
+    div.querySelector("#wiz-skip").onclick=()=>div.remove();
   },
   async signIn(email,password){
     if(!this.client){await this.init();}
@@ -1983,7 +2041,12 @@ document.addEventListener("click",e=>{
   }
   // admin trigger
   if(e.target.id==="admin-trigger"){
-    const lm=document.getElementById("login-modal");if(lm)lm.classList.add("show");return;
+    if(!Backend.getConfig()?.url){
+      Backend.showWizard();
+    } else {
+      const lm=document.getElementById("login-modal");if(lm)lm.classList.add("show");
+    }
+    return;
   }
   // forgot password recovery
   if(e.target.id==="forgot-pw-link"){
