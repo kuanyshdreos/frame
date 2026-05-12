@@ -1725,6 +1725,9 @@ function ml3List(basePath,val,rows){
 
 function renderBackendAdmin(){
   const cfg=Backend.getConfig()||{};
+  const isConnected = !!Backend.client;
+  const isAuth = !!Backend.user;
+  
   const sql=`-- Запусти в Supabase → SQL Editor → New query
 create table if not exists site_data (
   id int primary key default 1,
@@ -1740,45 +1743,60 @@ create policy "Auth write" on site_data for all
   with check (auth.role() = 'authenticated');
 insert into site_data (id, data) values (1, '{}'::jsonb)
   on conflict (id) do nothing;`;
+
   return `<div class="ap-section">
     <h3>Облачная синхронизация (Supabase)</h3>
-    <p class="muted">Сейчас правки живут только в этом браузере. С Supabase правки сохраняются в облаке и появляются на сайте у всех посетителей — никаких Publish/Import.</p>
+    <p class="muted">Статус облака определяет, сохраняются ли ваши правки навсегда или живут только в этом браузере.</p>
 
-    <div class="group"><h4>Статус</h4>
-      <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
-        <span style="font-size:12px;letter-spacing:.06em">
-          ${Backend.client?"🟢 Подключено к Supabase":"⚪ Не настроено"}
-          ${Backend.user?` · вошёл как <code>${esc(Backend.user.email)}</code>`:Backend.client?" · не авторизован":""}
-        </span>
-        ${Backend.user?`<button class="btn ghost" onclick="(async()=>{await Backend.signOut();renderAdmin();showToast('Выход выполнен');})()">Выйти</button>`:""}
+    <div class="group" style="background:${isConnected?'rgba(74,222,128,0.05)':'rgba(0,0,0,0.03)'}; border-color:${isConnected?'#4ade80':'var(--line)'}">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px">
+        <div>
+          <h4 style="margin-bottom:4px">Статус подключения</h4>
+          <div style="font-size:13px; font-weight:500; display:flex; align-items:center; gap:8px">
+            ${isConnected ? '<span style="color:#2a7a3a">🟢 Подключено к базе</span>' : '<span style="color:var(--muted)">⚪ Не подключено</span>'}
+            ${isAuth ? `<span style="color:#2a7a3a">· 👤 Админ: ${esc(Backend.user.email)}</span>` : isConnected ? ' · 👤 Не авторизован' : ''}
+          </div>
+        </div>
+        <div style="display:flex; gap:8px">
+          <button class="btn" onclick="(async()=>{const ok=await Backend.init(); showToast(ok?'✅ Соединение активно':'❌ Ошибка подключения'); renderAdmin();})()">🔄 Проверить</button>
+          ${!isConnected ? `<button class="btn primary" onclick="Backend.showWizard()">🚀 Запустить мастер настройки</button>` : ''}
+        </div>
       </div>
     </div>
 
-    <div class="group"><h4>Шаг 1 — настройка Supabase</h4>
-      <p class="muted" style="font-size:12px;margin-bottom:10px">1. Зарегистрируйся на <a href="https://supabase.com" target="_blank" style="color:var(--ink);text-decoration:underline">supabase.com</a> (бесплатно)<br/>2. Create new project, выбери регион поближе<br/>3. В <b>SQL Editor</b> запусти SQL ниже<br/>4. В <b>Authentication → Users → Add user</b> создай аккаунт с email + паролем</p>
-      <details><summary style="cursor:pointer;font-size:11px;letter-spacing:.06em;color:var(--ink-2);padding:8px 0">📋 Показать SQL</summary>
-        <textarea readonly style="width:100%;font-family:Menlo,monospace;font-size:11px;padding:14px;background:#0f0f0e;color:#e8e8df;border-radius:8px;border:none;min-height:240px;outline:none" onclick="this.select()">${sql}</textarea>
+    <div class="group"><h4>Шаг 1 — База данных</h4>
+      <p class="muted" style="font-size:12px; margin-bottom:10px">Если база еще не создана, запустите этот SQL в <b>SQL Editor</b> вашего проекта Supabase:</p>
+      <details><summary style="cursor:pointer;font-size:11px;letter-spacing:.06em;color:var(--ink-2);padding:8px 0">📋 Показать SQL для создания таблицы</summary>
+        <textarea readonly style="width:100%;font-family:Menlo,monospace;font-size:11px;padding:14px;background:#0f0f0e;color:#e8e8df;border-radius:8px;border:none;min-height:180px;outline:none" onclick="this.select()">${sql}</textarea>
       </details>
     </div>
 
-    <div class="group"><h4>Шаг 2 — подключи проект</h4>
-      <p class="muted" style="font-size:11px;margin-bottom:10px">В Supabase: <b>Project Settings → API</b> → скопируй <code>Project URL</code> и <code>anon public key</code></p>
+    <div class="group"><h4>Шаг 2 — Настройка API</h4>
       <div class="field"><label>Supabase URL</label><input id="be-url" value="${esc(cfg.url||"")}" placeholder="https://xxxxx.supabase.co"/></div>
       <div class="field"><label>Anon Public Key</label><input id="be-key" value="${esc(cfg.key||"")}" placeholder="eyJhbGc..." type="password"/></div>
-      <button class="btn primary" onclick="(async()=>{const u=document.getElementById('be-url').value.trim();const k=document.getElementById('be-key').value.trim();if(!u||!k){showToast('Заполни оба поля');return;}Backend.setConfig(u,k);const ok=await Backend.init();showToast(ok?'✓ Конфиг сохранён':'Ошибка инициализации');renderAdmin();})()">Сохранить и подключить</button>
-      ${cfg.url?`<button class="btn ghost" style="margin-left:10px" onclick="if(confirm('Очистить настройки backend?')){Backend.clearConfig();renderAdmin();showToast('Очищено');}">Очистить</button>`:""}
+      <div style="display:flex; gap:10px">
+        <button class="btn primary" onclick="(async()=>{const u=document.getElementById('be-url').value.trim();const k=document.getElementById('be-key').value.trim();if(!u||!k){showToast('Заполни оба поля');return;}Backend.setConfig(u,k);const ok=await Backend.init();showToast(ok?'✓ Конфиг сохранён':'Ошибка инициализации');renderAdmin();})()">Сохранить и подключить</button>
+        ${cfg.url?`<button class="btn ghost" onclick="if(confirm('Очистить настройки?')){Backend.clearConfig();renderAdmin();showToast('Очищено');}">Очистить</button>`:""}
+      </div>
     </div>
 
-    ${Backend.client&&!Backend.user?`<div class="group"><h4>Шаг 3 — войти</h4>
-      <p class="muted" style="font-size:11px;margin-bottom:10px">Используй email/пароль того юзера, которого создал в Supabase Authentication</p>
-      <div class="field"><label>Email</label><input id="be-email" type="email" placeholder="you@studio.com"/></div>
-      <div class="field"><label>Password</label><input id="be-pass" type="password"/></div>
-      <button class="btn primary" onclick="(async()=>{const e=document.getElementById('be-email').value;const p=document.getElementById('be-pass').value;const r=await Backend.signIn(e,p);if(r.error){showToast('Ошибка: '+r.error.message);}else{showToast('✓ Вход выполнен');renderAdmin();}})()">Войти</button>
+    ${isConnected && !isAuth ? `<div class="group" style="background:rgba(255,165,0,0.05); border-color:orange">
+      <h4>Шаг 3 — Авторизация</h4>
+      <p class="muted" style="font-size:11px;margin-bottom:10px">Чтобы иметь право сохранять данные, нужно войти под своим аккаунтом Supabase.</p>
+      <div class="field-row x2">
+        <div class="field"><label>Email</label><input id="be-email" type="email" placeholder="you@example.com"/></div>
+        <div class="field"><label>Password</label><input id="be-pass" type="password"/></div>
+      </div>
+      <button class="btn primary" onclick="(async()=>{const e=document.getElementById('be-email').value;const p=document.getElementById('be-pass').value;const r=await Backend.signIn(e,p);if(r.error){showToast('Ошибка: '+r.error.message);}else{showToast('✓ Вход выполнен');renderAdmin();}})()">Войти как админ</button>
     </div>`:""}
 
-    ${Backend.user?`<div class="group"><h4>Действия с данными</h4>
-      <button class="btn" onclick="(async()=>{const r=await Backend.save(DATA);showToast(r.ok?'☁ Залито в облако':'Ошибка: '+r.error);})()">⬆ Загрузить локальные данные в облако</button>
-      <button class="btn" style="margin-left:10px" onclick="(async()=>{const d=await Backend.load();if(d){DATA=d;localStorage.setItem('frame_data',JSON.stringify(d));render();renderAdmin();showToast('⬇ Скачано из облака');}else{showToast('В облаке пусто');}})()">⬇ Скачать из облака</button>
+    ${isAuth ? `<div class="group"><h4>Управление данными</h4>
+      <p class="muted" style="font-size:11px; margin-bottom:12px">Используйте эти кнопки, чтобы синхронизировать данные между вашим компьютером и облаком.</p>
+      <div style="display:flex; gap:10px; flex-wrap:wrap">
+        <button class="btn" onclick="(async()=>{const r=await Backend.save(DATA);showToast(r.ok?'☁ Сохранено в облако':'Ошибка: '+r.error);})()">⬆ Отправить в облако</button>
+        <button class="btn" onclick="(async()=>{const d=await Backend.load();if(d){DATA=d;localStorage.setItem('frame_data',JSON.stringify(d));render();renderAdmin();showToast('⬇ Загружено из облака');}else{showToast('В облаке пусто');}})()">⬇ Загрузить из облака</button>
+        <button class="btn ghost" onclick="(async()=>{await Backend.signOut();renderAdmin();showToast('Выход выполнен');})()">Выйти из сессии</button>
+      </div>
     </div>`:""}
   </div>`;
 }
@@ -2041,7 +2059,8 @@ document.addEventListener("click",e=>{
   }
   // admin trigger
   if(e.target.id==="admin-trigger"){
-    if(!Backend.getConfig()?.url){
+    const cfg = Backend.getConfig();
+    if(!cfg || !cfg.url || cfg.url === ""){
       Backend.showWizard();
     } else {
       const lm=document.getElementById("login-modal");if(lm)lm.classList.add("show");
