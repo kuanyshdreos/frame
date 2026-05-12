@@ -115,11 +115,16 @@ const Backend={
       return data?data.data:null;
     }catch(e){console.warn(e);return null;}
   },
+  async save(d){
+    if(!this.enabled||!this.client)return{ok:false,error:"Не авторизован"};
+    try{
+      const {error}=await this.client.from("site_data").upsert({id:1,data:d,updated_at:new Date().toISOString()},{onConflict:"id"});
+      if(error)return{ok:false,error:error.message};
+      return{ok:true};
     }catch(e){return{ok:false,error:e.message};}
   },
   subscribe(callback){
     if(!this.client||!this.enabled)return;
-    // Note: This requires 'Realtime' to be enabled for the 'site_data' table in Supabase dashboard
     this.client.channel('public:site_data')
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'site_data', filter: 'id=eq.1' }, payload => {
         if(payload.new && payload.new.data) {
