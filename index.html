@@ -209,7 +209,8 @@
     <h3 data-i18n="admin.login">Вход в панель</h3>
     <p class="sub" data-i18n="admin.loginSub">Введите пароль администратора.</p>
     <label data-i18n="admin.password">Пароль</label>
-    <input type="password" id="admin-password" placeholder="••••••••" />
+    <input type="password" id="admin-password" placeholder="••••••••" autocomplete="current-password" />
+    <div class="login-error" id="login-error"></div>
     <div class="modal-actions">
       <button class="btn primary" id="admin-login-btn" data-i18n="admin.enter">Войти</button>
       <button class="btn ghost" data-close-modal data-i18n="admin.cancel">Отмена</button>
@@ -248,6 +249,11 @@
     </div>
   </aside>
   <div class="ap-main">
+    <div class="sync-banner" id="sync-banner">
+      <span class="sync-icon">⚪</span>
+      <span class="sync-text">Проверка состояния…</span>
+      <a class="sync-action" id="sync-action" style="display:none"></a>
+    </div>
     <div class="ap-bar">
       <h2 id="ap-title">Hero</h2>
       <div class="ap-actions">

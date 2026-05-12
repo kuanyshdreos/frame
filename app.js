@@ -160,13 +160,17 @@ function saveData(){
   // debounced sync to backend
   if(Backend.enabled){
     clearTimeout(_syncTimer);
+    updateSyncBanner("syncing");
     _syncTimer=setTimeout(async()=>{
       const res=await Backend.save(DATA);
       if(st){
         if(res.ok){st.textContent="☁ Синхронизировано";st.className="ap-status saved";}
         else{st.textContent="⚠ Ошибка sync: "+(res.error||"unknown");st.className="ap-status dirty";}
       }
+      updateSyncBanner(res.ok?undefined:"err");
     },1200);
+  } else {
+    updateSyncBanner();
   }
 }
 
@@ -1163,6 +1167,7 @@ function navModal(dir){
 function openAdmin(){
   const panel=document.getElementById("admin-panel");if(panel){panel.style.display="flex";setTimeout(()=>panel.classList.add("open"),10);}
   renderAdmin();
+  updateSyncBanner();
 }
 function closeAdminPanel(){
   const panel=document.getElementById("admin-panel");if(!panel)return;
@@ -1308,6 +1313,55 @@ function renderProjectEditor(){
 }
 
 window.deleteProject=function(id){DATA.projects=(DATA.projects||[]).filter(x=>x.id!==id);editingProjectId=null;saveData();render();renderAdmin();render();};
+
+function doAdminLogin(){
+  const pw=document.getElementById("admin-password");
+  const errEl=document.getElementById("login-error");
+  const modal=document.querySelector("#login-modal .modal");
+  const showErr=(msg)=>{
+    if(errEl){errEl.textContent=msg;errEl.classList.add("show");}
+    if(modal){modal.classList.remove("shake");void modal.offsetWidth;modal.classList.add("shake");}
+    if(pw){pw.value="";pw.focus();}
+  };
+  const lockUntil=parseInt(localStorage.getItem("frame_login_lock")||"0");
+  if(Date.now()<lockUntil){
+    const sec=Math.ceil((lockUntil-Date.now())/1000);
+    showErr(`⏳ Заблокировано на ${sec} сек после 3 неверных попыток`);
+    return;
+  }
+  if(!pw||!pw.value){showErr("Введите пароль");return;}
+  sha256(pw.value).then(h=>{
+    if(h===DATA.site.adminPasswordHash){
+      localStorage.removeItem("frame_login_attempts");
+      localStorage.removeItem("frame_login_lock");
+      if(errEl){errEl.classList.remove("show");errEl.textContent="";}
+      const lm=document.getElementById("login-modal");if(lm)lm.classList.remove("show");
+      if(DATA.site.adminPasswordHash===CORRECT_HASH){
+        showToast("⚠ Поменяйте пароль (Сайт → Опасная зона)");
+      }
+      openAdmin();
+    }else{
+      const n=(parseInt(localStorage.getItem("frame_login_attempts")||"0"))+1;
+      localStorage.setItem("frame_login_attempts",String(n));
+      if(n>=3){
+        localStorage.setItem("frame_login_lock",String(Date.now()+60000));
+        localStorage.setItem("frame_login_attempts","0");
+        showErr("⛔ Слишком много попыток. Блок 60 секунд.");
+      }else{
+        showErr(`❌ Неверный пароль (${n}/3)`);
+      }
+    }
+  });
+}
+
+// Enter to submit password
+document.addEventListener("keydown",e=>{
+  if(e.key!=="Enter")return;
+  if(e.target&&e.target.id==="admin-password"){
+    e.preventDefault();
+    doAdminLogin();
+  }
+});
 
 window.recoverAdminPassword=async function(){
   const DEFAULT_HASH="8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918";
@@ -1723,6 +1777,41 @@ function ml3List(basePath,val,rows){
   `;
 }
 
+function updateSyncBanner(state){
+  const banner=document.getElementById("sync-banner");if(!banner)return;
+  const icon=banner.querySelector(".sync-icon");
+  const text=banner.querySelector(".sync-text");
+  const action=banner.querySelector("#sync-action");
+  if(!icon||!text||!action)return;
+  const goBackend=()=>{adminTab="backend";document.querySelectorAll("[data-ap]").forEach(b=>b.classList.toggle("active",b.dataset.ap==="backend"));renderAdmin();};
+  // Состояния: ok | warn-noconfig | warn-noauth | err | syncing | savedlocal
+  if(state==="syncing"){
+    banner.className="sync-banner ok pulse";
+    icon.textContent="☁";text.textContent="Синхронизация с облаком…";
+    action.style.display="none";return;
+  }
+  if(state==="err"){
+    banner.className="sync-banner err";
+    icon.textContent="⚠";text.textContent="Ошибка синхронизации. Изменения только локально.";
+    action.style.display="";action.textContent="Открыть Backend →";action.onclick=goBackend;return;
+  }
+  if(!Backend.getConfig()){
+    banner.className="sync-banner warn";
+    icon.textContent="⚠";text.textContent="Изменения только в этом браузере. Посетители видят старое.";
+    action.style.display="";action.textContent="Подключить Supabase →";action.onclick=goBackend;return;
+  }
+  if(!Backend.client||!Backend.user){
+    banner.className="sync-banner warn";
+    icon.textContent="🔒";text.textContent="Supabase подключён, но вы не вошли. Изменения не уйдут в облако.";
+    action.style.display="";action.textContent="Войти →";action.onclick=goBackend;return;
+  }
+  // всё ок
+  banner.className="sync-banner ok";
+  icon.textContent="🟢";text.textContent="Изменения видны всем посетителям сайта";
+  action.style.display="none";
+}
+window.updateSyncBanner=updateSyncBanner;
+
 function renderBackendAdmin(){
   const cfg=Backend.getConfig()||{};
   const isConnected = !!Backend.client;
@@ -1775,7 +1864,7 @@ insert into site_data (id, data) values (1, '{}'::jsonb)
       <div class="field"><label>Supabase URL</label><input id="be-url" value="${esc(cfg.url||"")}" placeholder="https://xxxxx.supabase.co"/></div>
       <div class="field"><label>Anon Public Key</label><input id="be-key" value="${esc(cfg.key||"")}" placeholder="eyJhbGc..." type="password"/></div>
       <div style="display:flex; gap:10px">
-        <button class="btn primary" onclick="(async()=>{const u=document.getElementById('be-url').value.trim();const k=document.getElementById('be-key').value.trim();if(!u||!k){showToast('Заполни оба поля');return;}Backend.setConfig(u,k);const ok=await Backend.init();showToast(ok?'✓ Конфиг сохранён':'Ошибка инициализации');renderAdmin();})()">Сохранить и подключить</button>
+        <button class="btn primary" onclick="(async()=>{const u=document.getElementById('be-url').value.trim();const k=document.getElementById('be-key').value.trim();if(!u||!k){showToast('Заполни оба поля');return;}Backend.setConfig(u,k);const ok=await Backend.init();showToast(ok?'✓ Конфиг сохранён':'Ошибка инициализации');renderAdmin();updateSyncBanner();})()">Сохранить и подключить</button>
         ${cfg.url?`<button class="btn ghost" onclick="if(confirm('Очистить настройки?')){Backend.clearConfig();renderAdmin();showToast('Очищено');}">Очистить</button>`:""}
       </div>
     </div>
@@ -1787,7 +1876,7 @@ insert into site_data (id, data) values (1, '{}'::jsonb)
         <div class="field"><label>Email</label><input id="be-email" type="email" placeholder="you@example.com"/></div>
         <div class="field"><label>Password</label><input id="be-pass" type="password"/></div>
       </div>
-      <button class="btn primary" onclick="(async()=>{const e=document.getElementById('be-email').value;const p=document.getElementById('be-pass').value;const r=await Backend.signIn(e,p);if(r.error){showToast('Ошибка: '+r.error.message);}else{showToast('✓ Вход выполнен');renderAdmin();}})()">Войти как админ</button>
+      <button class="btn primary" onclick="(async()=>{const e=document.getElementById('be-email').value;const p=document.getElementById('be-pass').value;const r=await Backend.signIn(e,p);if(r.error){showToast('Ошибка: '+r.error.message);}else{showToast('✓ Вход выполнен');renderAdmin();updateSyncBanner();}})()">Войти как админ</button>
     </div>`:""}
 
     ${isAuth ? `<div class="group"><h4>Управление данными</h4>
@@ -1795,7 +1884,7 @@ insert into site_data (id, data) values (1, '{}'::jsonb)
       <div style="display:flex; gap:10px; flex-wrap:wrap">
         <button class="btn" onclick="(async()=>{const r=await Backend.save(DATA);showToast(r.ok?'☁ Сохранено в облако':'Ошибка: '+r.error);})()">⬆ Отправить в облако</button>
         <button class="btn" onclick="(async()=>{const d=await Backend.load();if(d){DATA=d;localStorage.setItem('frame_data',JSON.stringify(d));render();renderAdmin();showToast('⬇ Загружено из облака');}else{showToast('В облаке пусто');}})()">⬇ Загрузить из облака</button>
-        <button class="btn ghost" onclick="(async()=>{await Backend.signOut();renderAdmin();showToast('Выход выполнен');})()">Выйти из сессии</button>
+        <button class="btn ghost" onclick="(async()=>{await Backend.signOut();renderAdmin();updateSyncBanner();showToast('Выход выполнен');})()">Выйти из сессии</button>
       </div>
     </div>`:""}
   </div>`;
@@ -2074,36 +2163,7 @@ document.addEventListener("click",e=>{
     return;
   }
   // login submit
-  if(e.target.id==="admin-login-btn"){
-    const lockUntil=parseInt(localStorage.getItem("frame_login_lock")||"0");
-    if(Date.now()<lockUntil){
-      const sec=Math.ceil((lockUntil-Date.now())/1000);
-      showToast(`Заблокировано на ${sec}с`);return;
-    }
-    const pw=document.getElementById("admin-password");
-    sha256(pw.value).then(h=>{
-      if(h===DATA.site.adminPasswordHash){
-        localStorage.removeItem("frame_login_attempts");
-        localStorage.removeItem("frame_login_lock");
-        const lm=document.getElementById("login-modal");if(lm)lm.classList.remove("show");
-        if(DATA.site.adminPasswordHash===CORRECT_HASH){
-          showToast("⚠ Поменяйте пароль (Сайт → Опасная зона)");
-        }
-        openAdmin();
-      }else{
-        const n=(parseInt(localStorage.getItem("frame_login_attempts")||"0"))+1;
-        localStorage.setItem("frame_login_attempts",String(n));
-        if(n>=3){
-          localStorage.setItem("frame_login_lock",String(Date.now()+60000));
-          localStorage.setItem("frame_login_attempts","0");
-          showToast("Слишком много попыток. Блок 60с.");
-        }else{
-          showToast(`Неверный пароль (${n}/3)`);
-        }
-        if(pw)pw.value="";
-      }
-    });return;
-  }
+  if(e.target.id==="admin-login-btn"){doAdminLogin();return;}
   // close admin
   if(e.target.id==="btn-close-admin"){closeAdminPanel();return;}
   // translate all
