@@ -1257,7 +1257,7 @@ function renderProjectsList(){
           <button class="ord-btn" ${i===list.length-1?'disabled':''} onclick="moveProject(${i},1)" aria-label="Вниз">↓</button>
         </div>
         <div class="thumb" style="background-image:url('${esc(p.cover)}')"></div>
-        <div class="proj-info"><div class="name">${esc(gl(p.title))||"(без названия)"}</div><div class="meta">${esc(p.client)} · ${p.year||""}</div></div>
+        <div class="proj-info"><div class="name">${esc(gl(p.title)) || esc(p.client) || "(без названия)"}</div><div class="meta">${esc(p.client)} · ${p.year||""}</div></div>
         <button class="btn edit-btn" onclick="editProject('${p.id}')">Изменить</button>
       </div>`).join("")}
     </div>
@@ -1380,14 +1380,7 @@ function doAdminLogin(){
     if(actions)modal.insertBefore(errEl,actions);else modal.appendChild(errEl);
   }
   const showErr=(msg)=>{
-    if(errEl){
-      errEl.textContent=msg;
-      errEl.style.display="block";
-      errEl.classList.add("show");
-      // принудительный repaint для гарантии видимости
-      void errEl.offsetWidth;
-    }
-    // Дублируем тостом — гарантированно видно
+    // Оставляем только всплывающее (toast)
     showToast(msg);
     if(modal){modal.classList.remove("shake");void modal.offsetWidth;modal.classList.add("shake");}
     if(pw){pw.value="";pw.focus();}
@@ -1397,8 +1390,21 @@ function doAdminLogin(){
   };
   const lockUntil=parseInt(localStorage.getItem("frame_login_lock")||"0");
   if(Date.now()<lockUntil){
+    if(window._loginTimer) clearInterval(window._loginTimer);
+    window._loginTimer = setInterval(()=>{
+      const left = parseInt(localStorage.getItem("frame_login_lock")||"0") - Date.now();
+      if(left <= 0){
+        clearInterval(window._loginTimer);
+        showToast("🔓 Можно пробовать снова");
+        hideErr();
+        return;
+      }
+      const sec = Math.ceil(left/1000);
+      showToast(`⏳ Заблокировано на ${sec} сек после 3 попыток`);
+    }, 1000);
+    
     const sec=Math.ceil((lockUntil-Date.now())/1000);
-    showErr(`⏳ Заблокировано на ${sec} сек после 3 неверных попыток`);
+    showToast(`⏳ Заблокировано на ${sec} сек после 3 попыток`);
     return;
   }
   if(!pw||!pw.value){showErr("Введите пароль");return;}
