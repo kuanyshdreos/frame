@@ -19,7 +19,13 @@ const Backend={
   getConfig(){
     try{return JSON.parse(localStorage.getItem("frame_backend")||"null");}catch(e){return null;}
   },
-  setConfig(url,key){localStorage.setItem("frame_backend",JSON.stringify({url,key}));},
+  setConfig(url,key){
+    localStorage.setItem("frame_backend",JSON.stringify({url,key}));
+    // Также сохраняем как публичный конфиг в DATA — попадёт в Supabase и data.json
+    // publishable/anon ключ безопасно хранить в открытом доступе (Supabase так и задумано)
+    if(!DATA.site)DATA.site={};
+    DATA.site.publicBackend={url,key};
+  },
   clearConfig(){localStorage.removeItem("frame_backend");this.client=null;this.user=null;this.enabled=false;},
   async init(){
     const cfg=this.getConfig();
@@ -130,7 +136,18 @@ function toEmbed(url){
   return url;
 }
 async function loadData(){
-  // Try backend first
+  // 1. Грузим data.json (всегда доступен как статика на Vercel)
+  let bootData=null;
+  try{const r=await fetch("data.json?v="+Date.now());if(r.ok)bootData=await r.json();}catch(e){}
+
+  // 2. Если в data.json есть публичный Supabase конфиг — гидрируем им Backend
+  // (это позволяет ЛЮБОМУ посетителю подтянуть свежие данные из облака)
+  const pub=bootData&&bootData.site&&bootData.site.publicBackend;
+  if(pub&&pub.url&&pub.key&&!localStorage.getItem("frame_backend")){
+    localStorage.setItem("frame_backend",JSON.stringify({url:pub.url,key:pub.key}));
+  }
+
+  // 3. Пробуем подтянуть свежие данные из Supabase
   try{
     const ok=await Backend.init();
     if(ok){
@@ -141,7 +158,14 @@ async function loadData(){
       }
     }
   }catch(e){console.warn("Backend load skipped:",e);}
-  try{const l=localStorage.getItem("frame_data");if(l)return JSON.parse(l);const r=await fetch("data.json");if(r.ok)return await r.json();}catch(e){}
+
+  // 4. Fallback: data.json (свежий с сервера)
+  if(bootData)return bootData;
+
+  // 5. Fallback: localStorage
+  try{const l=localStorage.getItem("frame_data");if(l)return JSON.parse(l);}catch(e){}
+
+  // 6. Default empty
   return {site:{name:"FRAME",email:"hello@frame.studio",phone:"+7 777 000 00 00",introWords:["Cinematic","Stories","Frame"],socials:[]},hero:{featuredId:""},projects:[],pricing:{headline:{en:"Pricing",ru:"Цены",kk:"Бағалар"},sub:{en:"Bespoke solutions",ru:"Индивидуальный подход",kk:"Жеке тәсіл"},currency:{en:"$"},packages:[]}};
 }
 let _saveTimer=null,_syncTimer=null;
@@ -1336,6 +1360,8 @@ function doAdminLogin(){
       localStorage.removeItem("frame_login_lock");
       if(errEl){errEl.classList.remove("show");errEl.textContent="";}
       const lm=document.getElementById("login-modal");if(lm)lm.classList.remove("show");
+      // Очищаем поле для безопасности
+      if(pw){pw.value="";pw.blur();}
       if(DATA.site.adminPasswordHash===CORRECT_HASH){
         showToast("⚠ Поменяйте пароль (Сайт → Опасная зона)");
       }
