@@ -1132,19 +1132,32 @@ function renderHeroAdmin(){
 }
 
 function renderProjectsList(){
+  const list=DATA.projects||[];
   return `<div class="ap-section"><h3>Проекты</h3>
-    <p class="muted">Перетаскивай строки чтобы изменить порядок (он же — порядок на главной).</p>
+    <p class="muted">Перетаскивай (на ПК) или жми ↑↓ (на телефоне) чтобы изменить порядок.</p>
     <div class="ap-projects-list" id="ap-projects-list">
-      ${(DATA.projects||[]).map((p,i)=>`<div class="ap-project-row" draggable="true" data-pidx="${i}">
+      ${list.map((p,i)=>`<div class="ap-project-row" draggable="true" data-pidx="${i}">
         <div class="drag-handle" title="Перетащить">⋮⋮</div>
+        <div class="ord-btns">
+          <button class="ord-btn" ${i===0?'disabled':''} onclick="moveProject(${i},-1)" aria-label="Вверх">↑</button>
+          <button class="ord-btn" ${i===list.length-1?'disabled':''} onclick="moveProject(${i},1)" aria-label="Вниз">↓</button>
+        </div>
         <div class="thumb" style="background-image:url('${esc(p.cover)}')"></div>
-        <div><div class="name">${esc(gl(p.title))||"(без названия)"}</div><div class="meta">${esc(p.client)} · ${p.year||""}</div></div>
-        <button class="btn" onclick="editProject('${p.id}')">Изменить</button>
+        <div class="proj-info"><div class="name">${esc(gl(p.title))||"(без названия)"}</div><div class="meta">${esc(p.client)} · ${p.year||""}</div></div>
+        <button class="btn edit-btn" onclick="editProject('${p.id}')">Изменить</button>
       </div>`).join("")}
     </div>
     <button class="btn primary" onclick="editProject('__new__')">+ Новый проект</button>
   </div>`;
 }
+window.moveProject=function(idx,dir){
+  if(!DATA.projects)return;
+  const to=idx+dir;
+  if(to<0||to>=DATA.projects.length)return;
+  const moved=DATA.projects.splice(idx,1)[0];
+  DATA.projects.splice(to,0,moved);
+  saveData();render();renderAdmin();
+};
 
 window.editProject=function(id){editingProjectId=id;renderAdmin();};
 
