@@ -47,6 +47,13 @@ const Backend={
     }catch(e){console.warn("Backend init failed:",e);return false;}
   },
   showWizard(){
+    // Если настройки уже есть в DATA (но еще не в localStorage) — просто применяем их и не показываем визард
+    const pub = window.DATA?.site?.publicBackend;
+    if(pub && pub.url && pub.key){
+      this.setConfig(pub.url, pub.key);
+      const lm=document.getElementById("login-modal");
+      if(lm) { lm.classList.add("show"); return; }
+    }
     if(document.getElementById("setup-wizard"))return;
     const div=document.createElement("div");
     div.id="setup-wizard";
@@ -2234,6 +2241,11 @@ document.addEventListener("click",e=>{
   }
   // admin trigger
   if(e.target.id==="admin-trigger"){
+    // Ждем если DATA еще не загружена (на всякий случай)
+    if(!window.DATA || !window.DATA.site) {
+      showToast("⏳ Загрузка конфигурации...");
+      return;
+    }
     const cfg = Backend.getConfig();
     if(!cfg){
       Backend.showWizard();
