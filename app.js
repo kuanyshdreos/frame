@@ -17,7 +17,12 @@ const Backend={
     return this._sdkLoading;
   },
   getConfig(){
-    try{return JSON.parse(localStorage.getItem("frame_backend")||"null");}catch(e){return null;}
+    try{
+      const local = JSON.parse(localStorage.getItem("frame_backend")||"null");
+      if(local && local.url && local.key) return local;
+      if(window.DATA && DATA.site && DATA.site.publicBackend) return DATA.site.publicBackend;
+      return null;
+    } catch(e){ return null; }
   },
   setConfig(url,key){
     localStorage.setItem("frame_backend",JSON.stringify({url,key}));
@@ -2230,10 +2235,16 @@ document.addEventListener("click",e=>{
   // admin trigger
   if(e.target.id==="admin-trigger"){
     const cfg = Backend.getConfig();
-    if(!cfg || !cfg.url || cfg.url === ""){
+    if(!cfg){
       Backend.showWizard();
     } else {
-      const lm=document.getElementById("login-modal");if(lm)lm.classList.add("show");
+      if(!Backend.client) Backend.init();
+      const lm=document.getElementById("login-modal");
+      if(lm){
+        lm.classList.add("show");
+        const pw = document.getElementById("admin-password");
+        if(pw) setTimeout(()=>pw.focus(), 100);
+      }
     }
     return;
   }
