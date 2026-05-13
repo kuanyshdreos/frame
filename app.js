@@ -48,7 +48,7 @@ const Backend={
   },
   showWizard(){
     // Если настройки уже есть в DATA (но еще не в localStorage) — просто применяем их и не показываем визард
-    const pub = window.DATA?.site?.publicBackend;
+    const pub = (window.DATA?.site?.publicBackend) || (window.DATA?.publicBackend);
     if(pub && pub.url && pub.key){
       this.setConfig(pub.url, pub.key);
       const lm=document.getElementById("login-modal");
@@ -170,14 +170,10 @@ async function loadData(){
   }catch(e){}
 
   // 2. Если в data.json есть публичный Supabase конфиг — гидрируем им Backend
-  // (это позволяет ЛЮБОМУ посетителю подтянуть свежие данные из облака)
-  const pub=bootData&&bootData.site&&bootData.site.publicBackend;
+  const pub=(bootData&&bootData.site&&bootData.site.publicBackend) || (bootData&&bootData.publicBackend);
   if(pub&&pub.url&&pub.key){
-    const currentCfg = Backend.getConfig();
-    if (!currentCfg || currentCfg.url !== pub.url || currentCfg.key !== pub.key) {
-      console.log("Updating backend config from data.json");
-      localStorage.setItem("frame_backend",JSON.stringify({url:pub.url,key:pub.key}));
-    }
+    localStorage.setItem("frame_backend",JSON.stringify({url:pub.url,key:pub.key}));
+    if(Backend) Backend.init(); // Сразу инициализируем
   }
 
   // 3. Пробуем подтянуть свежие данные из Supabase
