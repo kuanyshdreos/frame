@@ -47,7 +47,11 @@ const Backend={
     }catch(e){console.warn("Backend init failed:",e);return false;}
   },
   showWizard(){
-    // Если настройки уже есть в DATA (но еще не в localStorage) — просто применяем их и не показываем визард
+    // ПРОВЕРКА №0: Если конфиг уже есть в localStorage - ВООБЩЕ не показываем визард
+    const existing = this.getConfig();
+    if(existing && existing.url && existing.key) return;
+
+    // ПРОВЕРКА №1: Если настройки уже есть в DATA (из data.json) — просто применяем их
     const pub = (window.DATA?.site?.publicBackend) || (window.DATA?.publicBackend);
     if(pub && pub.url && pub.key){
       this.setConfig(pub.url, pub.key);
@@ -2240,14 +2244,24 @@ document.addEventListener("click",e=>{
   }
   // admin trigger
   if(e.target.id==="admin-trigger"){
-    const tryOpen = () => {
-      const cfg = Backend.getConfig();
-      if(!cfg && (!window.DATA || !window.DATA.site)){
-        showToast("⏳ Загрузка конфигурации...");
-        return;
+    const tryOpen = async () => {
+      let cfg = Backend.getConfig();
+      
+      // Если конфига нет - пробуем взять из загруженных данных еще раз
+      if(!cfg && window.DATA?.site?.publicBackend) {
+        const p = window.DATA.site.publicBackend;
+        Backend.setConfig(p.url, p.key);
+        cfg = p;
       }
-      if(!cfg) { Backend.showWizard(); return; }
-      if(!Backend.client) Backend.init();
+
+      if(!cfg){
+        Backend.showWizard(); 
+        return; 
+      }
+      
+      // Принудительная инициализация перед входом
+      if(!Backend.client) await Backend.init();
+      
       const lm=document.getElementById("login-modal");
       if(lm){
         lm.classList.add("show");
