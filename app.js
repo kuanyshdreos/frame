@@ -163,7 +163,10 @@ async function loadData(){
   let bootData=null;
   try{
     const r=await fetch("data.json?v="+Date.now(), { cache: 'no-store' });
-    if(r.ok)bootData=await r.json();
+    if(r.ok) {
+      bootData=await r.json();
+      window.DATA = bootData;
+    }
   }catch(e){}
 
   // 2. Если в data.json есть публичный Supabase конфиг — гидрируем им Backend
@@ -2241,15 +2244,13 @@ document.addEventListener("click",e=>{
   }
   // admin trigger
   if(e.target.id==="admin-trigger"){
-    // Ждем если DATA еще не загружена (на всякий случай)
-    if(!window.DATA || !window.DATA.site) {
-      showToast("⏳ Загрузка конфигурации...");
-      return;
-    }
-    const cfg = Backend.getConfig();
-    if(!cfg){
-      Backend.showWizard();
-    } else {
+    const tryOpen = () => {
+      const cfg = Backend.getConfig();
+      if(!cfg && (!window.DATA || !window.DATA.site)){
+        showToast("⏳ Загрузка конфигурации...");
+        return;
+      }
+      if(!cfg) { Backend.showWizard(); return; }
       if(!Backend.client) Backend.init();
       const lm=document.getElementById("login-modal");
       if(lm){
@@ -2257,7 +2258,8 @@ document.addEventListener("click",e=>{
         const pw = document.getElementById("admin-password");
         if(pw) setTimeout(()=>pw.focus(), 100);
       }
-    }
+    };
+    tryOpen();
     return;
   }
   // forgot password recovery
