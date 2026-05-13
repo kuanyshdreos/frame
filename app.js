@@ -170,6 +170,11 @@ function toEmbed(url){
   if(!url)return null;
   if(url.includes("vimeo.com")){const id=url.split("/").pop().split("?")[0];return "https://player.vimeo.com/video/"+id;}
   if(url.includes("youtube.com")||url.includes("youtu.be")){let id="";if(url.includes("v="))id=url.split("v=")[1].split("&")[0];else id=url.split("/").pop();return "https://www.youtube.com/embed/"+id;}
+  if(url.includes("kinescope.io")){
+    // Поддержка: kinescope.io/ID, kinescope.io/embed/ID, kinescope.io/v/ID
+    const m=url.match(/kinescope\.io\/(?:embed\/|v\/)?([a-zA-Z0-9]+)/);
+    if(m&&m[1])return "https://kinescope.io/embed/"+m[1];
+  }
   return url;
 }
 function toPlayerSrc(url,opts={}){
@@ -197,6 +202,15 @@ function toPlayerSrc(url,opts={}){
       "modestbranding=1",
       opts.muted?"mute=1":"",
       id?"playlist="+encodeURIComponent(id):""
+    ].filter(Boolean).join("&");
+    return embed+join+params;
+  }
+  if(embed.includes("kinescope.io")){
+    const params=[
+      opts.autoplay!==false?"autoplay=true":"",
+      "playsinline=true",
+      opts.muted?"muted=true":"",
+      opts.loop?"loop=true":""
     ].filter(Boolean).join("&");
     return embed+join+params;
   }
@@ -540,7 +554,7 @@ function renderAbout(){
   ]);
   const mUrl=(ab.media&&ab.media.url)||"";
   const hasMedia=!!mUrl;
-  const isVid=hasMedia&&/vimeo\.com|youtube\.com|youtu\.be/i.test(mUrl);
+  const isVid=hasMedia&&/vimeo\.com|youtube\.com|youtu\.be|kinescope\.io/i.test(mUrl);
   let mediaBlock="";
   if(hasMedia){
     if(isVid){
@@ -1736,7 +1750,6 @@ insert into site_data (id, data) values (1, '{}'::jsonb)
         </div>
         <div class="be-actions">
           <button class="btn" title="Переподключиться" onclick="(async()=>{const btn=this;btn.textContent='...';const ok=await Backend.init();btn.textContent='🔄 Проверить';showToast(ok?'✅ Соединение активно':'❌ Ошибка подключения');renderAdmin();})()">🔄 Проверить</button>
-          ${isAuth ? `<button class="btn primary" title="Отправить локальные изменения в облако сейчас" onclick="(async()=>{const btn=this;const old=btn.textContent;btn.textContent='Отправка...';const res=await Backend.save(DATA);btn.textContent=old;showToast(res.ok?'✅ Успешно синхронизировано':'❌ Ошибка: '+res.error);})()">📤 Отправить в облако</button>` : ''}
           ${!isConnected ? `<button class="btn primary" onclick="Backend.showWizard()">🚀 Запустить мастер настройки</button>` : ''}
         </div>
       </div>
