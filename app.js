@@ -2,18 +2,26 @@ const I18N={en:{"intro.brand":"FRAME · STUDIO","intro.q":"Choose your language"
 
 let DATA={},currentLang=localStorage.getItem("frame_lang")||"en",isAdmin=false,editingProjectId=null,currentCategory="all",adminTab="projects";
 
+function withTimeout(promise,ms,label){
+  return Promise.race([
+    promise,
+    new Promise((_,rej)=>setTimeout(()=>rej(new Error((label||"operation")+" timeout")),ms))
+  ]);
+}
+
 // ───── Supabase backend ─────
 const Backend={
   client:null,user:null,enabled:false,_sdkLoading:null,
   _loadSDK(){
     if(window.supabase)return Promise.resolve();
     if(this._sdkLoading)return this._sdkLoading;
-    this._sdkLoading=new Promise((res,rej)=>{
+    this._sdkLoading=withTimeout(new Promise((res,rej)=>{
       const s=document.createElement("script");
       s.src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js";
+      s.async=true;
       s.onload=()=>res();s.onerror=rej;
       document.head.appendChild(s);
-    });
+    }),8000,"Supabase SDK");
     return this._sdkLoading;
   },
   getConfig(){
@@ -30,6 +38,7 @@ const Backend={
     // publishable/anon ключ безопасно хранить в открытом доступе (Supabase так и задумано)
     if(!DATA.site)DATA.site={};
     DATA.site.publicBackend={url,key};
+    try{localStorage.setItem("frame_data",JSON.stringify(DATA));}catch(e){}
   },
   clearConfig(){localStorage.removeItem("frame_backend");this.client=null;this.user=null;this.enabled=false;},
   async init(){
@@ -41,8 +50,9 @@ const Backend={
     try{
       await this._loadSDK();
       this.client=window.supabase.createClient(cfg.url,cfg.key,{auth:{persistSession:true,autoRefreshToken:true}});
-      const {data}=await this.client.auth.getSession();
+      const {data}=await withTimeout(this.client.auth.getSession(),6000,"Supabase session");
       if(data&&data.session){this.user=data.session.user;this.enabled=true;}
+      else{this.enabled=false;}
       return true;
     }catch(e){console.warn("Backend init failed:",e);return false;}
   },
@@ -162,43 +172,56 @@ function toEmbed(url){
   if(url.includes("youtube.com")||url.includes("youtu.be")){let id="";if(url.includes("v="))id=url.split("v=")[1].split("&")[0];else id=url.split("/").pop();return "https://www.youtube.com/embed/"+id;}
   return url;
 }
+function toPlayerSrc(url,opts={}){
+  const embed=toEmbed(url);
+  if(!embed)return "";
+  const join=embed.includes("?")?"&":"?";
+  if(embed.includes("vimeo.com")){
+    const params=[
+      opts.autoplay!==false?"autoplay=1":"",
+      "playsinline=1",
+      "title=0",
+      "byline=0",
+      "portrait=0",
+      "dnt=1",
+      opts.muted?"muted=1":""
+    ].filter(Boolean).join("&");
+    return embed+join+params;
+  }
+  if(embed.includes("youtube.com")){
+    const id=embed.split("/").pop().split("?")[0];
+    const params=[
+      opts.autoplay!==false?"autoplay=1":"",
+      "playsinline=1",
+      "rel=0",
+      "modestbranding=1",
+      opts.muted?"mute=1":"",
+      id?"playlist="+encodeURIComponent(id):""
+    ].filter(Boolean).join("&");
+    return embed+join+params;
+  }
+  return embed;
+}
 async function loadData(){
-  // 1. Грузим data.json (всегда доступен как статика на Vercel)
   let bootData=null;
   try{
-    const r=await fetch("data.json?v="+Date.now(), { cache: 'no-store' });
+    const r=await withTimeout(fetch("data.json?v="+Date.now(), { cache: 'no-store' }),5000,"data.json");
     if(r.ok) {
       bootData=await r.json();
       window.DATA = bootData;
     }
   }catch(e){}
 
-  // 2. Если в data.json есть публичный Supabase конфиг — гидрируем им Backend
   const pub=(bootData&&bootData.site&&bootData.site.publicBackend) || (bootData&&bootData.publicBackend);
   if(pub&&pub.url&&pub.key){
     localStorage.setItem("frame_backend",JSON.stringify({url:pub.url,key:pub.key}));
-    if(Backend) Backend.init(); // Сразу инициализируем
   }
 
-  // 3. Пробуем подтянуть свежие данные из Supabase
-  try{
-    const ok=await Backend.init();
-    if(ok){
-      const remote=await Backend.load();
-      if(remote&&typeof remote==="object"&&Object.keys(remote).length){
-        localStorage.setItem("frame_data",JSON.stringify(remote));
-        return remote;
-      }
-    }
-  }catch(e){console.warn("Backend load skipped:",e);}
-
-  // 4. Fallback: data.json (свежий с сервера)
   if(bootData) {
     localStorage.setItem("frame_data", JSON.stringify(bootData));
     return bootData;
   }
 
-  // 5. Fallback: localStorage
   try{
     const l=localStorage.getItem("frame_data");
     if(l) {
@@ -207,8 +230,34 @@ async function loadData(){
     }
   }catch(e){}
 
-  // 6. Default empty
   return {site:{name:"FRAME",email:"hello@frame.studio",phone:"+7 777 000 00 00",introWords:["Cinematic","Stories","Frame"],socials:[]},hero:{featuredId:""},projects:[],pricing:{headline:{en:"Pricing",ru:"Цены",kk:"Бағалар"},sub:{en:"Bespoke solutions",ru:"Индивидуальный подход",kk:"Жеке тәсіл"},currency:{en:"$"},packages:[]}};
+}
+async function syncRemoteDataAfterBoot(){
+  try{
+    const ok=await Backend.init();
+    updateSyncBanner();
+    if(!ok||!Backend.client)return;
+    const remote=await withTimeout(Backend.load(),8000,"Supabase data load");
+    if(remote&&typeof remote==="object"&&Object.keys(remote).length&&!isAdmin){
+      DATA=remote;
+      localStorage.setItem("frame_data",JSON.stringify(DATA));
+      render();
+      applyEnabledLangs();
+    }
+    if(Backend.enabled){
+      Backend.subscribe((newData)=>{
+        if(!isAdmin){
+          DATA=newData;
+          localStorage.setItem("frame_data",JSON.stringify(DATA));
+          render();
+          showToast("☁ Сайт обновлен");
+        }
+      });
+    }
+  }catch(e){
+    console.warn("Background sync skipped:",e);
+    updateSyncBanner("err");
+  }
 }
 let _saveTimer=null,_syncTimer=null;
 function saveData(){
@@ -386,7 +435,7 @@ function applyLang(lang){
 }
 
 function render(){
-  try{renderNav();renderDpHero();renderMarquee();renderStudioStrip();renderPricing();renderFooter();renderClients();renderAbout();renderContactCTAs();renderStructuredData();}catch(e){console.error(e);}
+  try{renderNav();renderDpHero();renderGrid();renderMarquee();renderStudioStrip();renderProcess();renderTestimonials();renderAwards();renderPricing();renderFooter();renderClients();renderAbout();renderContactCTAs();renderStructuredData();}catch(e){console.error(e);}
 }
 
 function renderAwards(){
@@ -1130,11 +1179,16 @@ window.openModal=function(id,srcEl){
   const p=(DATA.projects||[]).find(x=>x.id===id);if(!p)return;
   _modalProjectId=id;
   const modal=document.getElementById("project-modal"),content=document.getElementById("project-modal-content");
+  if(!modal||!content)return;
   const container=modal.querySelector(".modal-video-container");
-  const embed=toEmbed(p.videoUrl);
-  const videoEl = embed
-    ? `<iframe src="${embed}?autoplay=1" style="width:100%;height:100%;border:none;display:block" allow="autoplay;fullscreen"></iframe>`
-    : `<div style="width:100%;height:100%;background:url('${p.cover}') center/cover"></div>`;
+  if(!container)return;
+  const playerSrc=toPlayerSrc(p.videoUrl,{autoplay:true});
+  const rawRatio=String(p.aspect||p.ratio||p.format||"").toLowerCase();
+  const aspectClass=/16|wide|landscape|horizontal/.test(rawRatio)?"is-wide":"is-vertical";
+  const posterEl=p.cover?`<div class="pm-embed-poster" style="background-image:url('${esc(p.cover)}')"></div>`:"";
+  const videoEl = playerSrc
+    ? `${posterEl}<iframe src="${esc(playerSrc)}" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen loading="eager" onload="this.closest('.pm-video').classList.add('loaded')"></iframe>`
+    : `<div class="pm-poster-fallback" style="background-image:url('${esc(p.cover||"")}')"></div>`;
   const catLabels={commercials:{en:"COMMERCIAL",ru:"РЕКЛАМА",kk:"ЖАРНАМА"},stories:{en:"STORY",ru:"ИСТОРИЯ",kk:"ОҚИҒА"},personal:{en:"PERSONAL",ru:"ЛИЧНОЕ",kk:"ЖЕКЕ"}};
   const cat=catLabels[p.category]?gl(catLabels[p.category]):(p.category||"").toUpperCase();
   const title=gl(p.title);
@@ -1143,7 +1197,7 @@ window.openModal=function(id,srcEl){
     <div class="pm-layout">
       <div class="pm-video-side">
         <div class="pm-brand-tag"><span class="dot">●</span>${esc((p.client||"").toUpperCase())}</div>
-        <div class="pm-video">${videoEl}</div>
+        <div class="pm-video ${aspectClass}">${videoEl}</div>
         ${p.runtime?`<div class="pm-runtime-tag">${esc(p.runtime)}</div>`:""}
       </div>
       <div class="pm-info-side">
@@ -1230,7 +1284,50 @@ function navModal(dir){
 }
 
 // ADMIN
+function ensureAdminShell(){
+  const panel=document.getElementById("admin-panel");
+  if(!panel||document.getElementById("ap-content"))return;
+  const tabs=[
+    ["projects","Проекты","▦"],
+    ["site","Сайт","◎"],
+    ["pricing","Цены","₸"],
+    ["contact","Контакты","@"],
+    ["about","О нас","i"],
+    ["process","Процесс","→"],
+    ["testimonials","Отзывы","“"],
+    ["awards","Награды","★"],
+    ["backend","Backend","☁"]
+  ];
+  panel.innerHTML=`<aside class="ap-side">
+    <div class="ap-brand"><span class="b">${esc(DATA.site&&DATA.site.name||"FRAME")}</span><span class="t">Admin</span></div>
+    ${tabs.map(t=>`<button class="ap-tab${adminTab===t[0]?" active":""}" data-ap="${t[0]}"><span class="ic">${t[2]}</span>${t[1]}</button>`).join("")}
+    <div class="ap-side-bottom">
+      <div class="row"><span>Last save</span><span id="last-save">—</span></div>
+      <div class="row"><span>Size</span><span id="storage-size">—</span></div>
+    </div>
+  </aside>
+  <section class="ap-main">
+    <div id="sync-banner" class="sync-banner"><span class="sync-icon">⚠</span><span class="sync-text"></span><button class="sync-action" id="sync-action" type="button"></button></div>
+    <div class="ap-bar">
+      <h2 id="ap-title">Проекты</h2>
+      <div class="ap-actions">
+        <span class="ap-status saved" id="ap-status">✓ Готово</span>
+        <button class="btn" id="btn-preview">Просмотр</button>
+        <button class="btn" id="btn-refresh-site">Обновить</button>
+        <button class="btn ghost" id="btn-close-admin">Закрыть</button>
+      </div>
+    </div>
+    <div class="ap-content" id="ap-content"></div>
+  </section>
+  <input type="file" id="import-file" accept="application/json" style="display:none">`;
+  const importFile=document.getElementById("import-file");
+  if(importFile&&!importFile.dataset.bound){
+    importFile.dataset.bound="1";
+    importFile.addEventListener("change",handleImportFile);
+  }
+}
 function openAdmin(){
+  ensureAdminShell();
   const panel=document.getElementById("admin-panel");if(panel){panel.style.display="flex";setTimeout(()=>panel.classList.add("open"),10);}
   renderAdmin();
   updateSyncBanner();
@@ -1435,6 +1532,9 @@ function doAdminLogin(){
         showToast("⚠ Поменяйте пароль (Сайт → Опасная зона)");
       }
       openAdmin();
+      if(Backend.getConfig()){
+        Backend.init().then(()=>{updateSyncBanner();renderAdmin();}).catch(()=>updateSyncBanner("err"));
+      }
     }else{
       const n=(parseInt(localStorage.getItem("frame_login_attempts")||"0"))+1;
       localStorage.setItem("frame_login_attempts",String(n));
@@ -1941,7 +2041,7 @@ insert into site_data (id, data) values (1, '{}'::jsonb)
             ${isAuth ? `<span style="color:#2a7a3a">· 👤 Админ: ${esc(Backend.user.email)}</span>` : isConnected ? ' · 👤 Не авторизован' : ''}
           </div>
         </div>
-        <div style="display:flex; gap:8px">
+        <div class="be-actions">
           <button class="btn" title="Переподключиться" onclick="(async()=>{const btn=this;btn.textContent='...';const ok=await Backend.init();btn.textContent='🔄 Проверить';showToast(ok?'✅ Соединение активно':'❌ Ошибка подключения');renderAdmin();})()">🔄 Проверить</button>
           ${isAuth ? `<button class="btn primary" title="Отправить локальные изменения в облако сейчас" onclick="(async()=>{const btn=this;const old=btn.textContent;btn.textContent='Отправка...';const res=await Backend.save(DATA);btn.textContent=old;showToast(res.ok?'✅ Успешно синхронизировано':'❌ Ошибка: '+res.error);})()">📤 Отправить в облако</button>` : ''}
           ${!isConnected ? `<button class="btn primary" onclick="Backend.showWizard()">🚀 Запустить мастер настройки</button>` : ''}
@@ -1959,7 +2059,7 @@ insert into site_data (id, data) values (1, '{}'::jsonb)
     <div class="group"><h4>Шаг 2 — Настройка API</h4>
       <div class="field"><label>Supabase URL</label><input id="be-url" value="${esc(cfg.url||"")}" placeholder="https://xxxxx.supabase.co"/></div>
       <div class="field"><label>Anon Public Key</label><input id="be-key" value="${esc(cfg.key||"")}" placeholder="eyJhbGc..." type="password"/></div>
-      <div style="display:flex; gap:10px">
+      <div class="be-actions">
         <button class="btn primary" onclick="(async()=>{const u=document.getElementById('be-url').value.trim();const k=document.getElementById('be-key').value.trim();if(!u||!k){showToast('Заполни оба поля');return;}Backend.setConfig(u,k);const ok=await Backend.init();showToast(ok?'✓ Конфиг сохранён':'Ошибка инициализации');renderAdmin();updateSyncBanner();})()">Сохранить и подключить</button>
         ${cfg.url?`<button class="btn ghost" onclick="if(confirm('Очистить настройки?')){Backend.clearConfig();renderAdmin();showToast('Очищено');}">Очистить</button>`:""}
       </div>
@@ -1977,7 +2077,7 @@ insert into site_data (id, data) values (1, '{}'::jsonb)
 
     ${isAuth ? `<div class="group"><h4>Управление данными</h4>
       <p class="muted" style="font-size:11px; margin-bottom:12px">Используйте эти кнопки, чтобы синхронизировать данные между вашим компьютером и облаком.</p>
-      <div style="display:flex; gap:10px; flex-wrap:wrap">
+      <div class="be-actions">
         <button class="btn" onclick="(async()=>{const r=await Backend.save(DATA);showToast(r.ok?'☁ Сохранено в облако':'Ошибка: '+r.error);})()">⬆ Отправить в облако</button>
         <button class="btn" onclick="(async()=>{const d=await Backend.load();if(d){DATA=d;localStorage.setItem('frame_data',JSON.stringify(d));render();renderAdmin();showToast('⬇ Загружено из облака');}else{showToast('В облаке пусто');}})()">⬇ Загрузить из облака</button>
         <button class="btn ghost" onclick="(async()=>{await Backend.signOut();renderAdmin();updateSyncBanner();showToast('Выход выполнен');})()">Выйти из сессии</button>
@@ -2243,33 +2343,29 @@ document.addEventListener("click",e=>{
     if(p)openModal(p.id);return;
   }
   // admin trigger
-  if(e.target.id==="admin-trigger"){
-    const tryOpen = async () => {
-      let cfg = Backend.getConfig();
-      
-      // Если конфига нет - пробуем взять из загруженных данных еще раз
-      if(!cfg && window.DATA?.site?.publicBackend) {
-        const p = window.DATA.site.publicBackend;
-        Backend.setConfig(p.url, p.key);
-        cfg = p;
-      }
+  if(e.target.id==="admin-trigger" || e.target.id==="mobile-admin-trigger"){
+    // 1. Закрываем мобильное меню если открыто
+    const menu = document.getElementById("mobile-menu");
+    const burger = document.getElementById("burger");
+    if(menu) menu.classList.remove("open");
+    if(burger) burger.classList.remove("open");
+    document.body.classList.remove("menu-open");
 
-      if(!cfg){
-        Backend.showWizard(); 
-        return; 
-      }
-      
-      // Принудительная инициализация перед входом
-      if(!Backend.client) await Backend.init();
-      
-      const lm=document.getElementById("login-modal");
-      if(lm){
-        lm.classList.add("show");
-        const pw = document.getElementById("admin-password");
-        if(pw) setTimeout(()=>pw.focus(), 100);
-      }
-    };
-    tryOpen();
+    // 2. Мгновенно показываем окно логина
+    const lm=document.getElementById("login-modal");
+    if(lm){
+      lm.classList.add("show");
+      const pw = document.getElementById("admin-password");
+      if(pw) setTimeout(()=>pw.focus(), 100);
+    }
+    
+    // 3. Параллельно (в фоне) готовим базу
+    const cfg = Backend.getConfig();
+    if(!cfg && window.DATA?.site?.publicBackend) {
+      Backend.setConfig(window.DATA.site.publicBackend.url, window.DATA.site.publicBackend.key);
+    }
+    if(Backend.getConfig()) Backend.init();
+    
     return;
   }
   // forgot password recovery
@@ -2350,7 +2446,7 @@ document.addEventListener("click",e=>{
   }
 });
 
-document.getElementById("import-file")&&document.getElementById("import-file").addEventListener("change",e=>{
+function handleImportFile(e){
   const f=e.target.files[0];if(!f)return;
   if(f.size>5*1024*1024){showToast("Файл слишком большой (>5MB)");return;}
   const r=new FileReader();r.onload=ev=>{
@@ -2362,7 +2458,8 @@ document.getElementById("import-file")&&document.getElementById("import-file").a
       DATA=parsed;saveData();render();renderAdmin();showToast("✅ Импортировано");
     }catch(err){showToast("Невалидный JSON");}
   };r.readAsText(f);
-});
+}
+document.getElementById("import-file")&&document.getElementById("import-file").addEventListener("change",handleImportFile);
 
 async function sha256(str){const buf=new TextEncoder().encode(str);const h=await crypto.subtle.digest("SHA-256",buf);return Array.from(new Uint8Array(h)).map(b=>b.toString(16).padStart(2,"0")).join("");}
 
@@ -2473,19 +2570,7 @@ const CORRECT_HASH="8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448
   applyLang(currentLang);
   applyEnabledLangs();
   route();
-
-  // Realtime sync for other devices
-  if(Backend.enabled) {
-    Backend.subscribe((newData) => {
-      // Только если мы не в режиме редактирования (чтобы не затереть изменения админа)
-      if(!isAdmin) {
-        DATA = newData;
-        localStorage.setItem("frame_data", JSON.stringify(DATA));
-        render();
-        showToast("☁ Сайт обновлен (получены новые данные)");
-      }
-    });
-  }
+  syncRemoteDataAfterBoot();
   // если включён только один язык — пропускаем интро автоматически
   const enabled=getEnabledLangs();
   if(enabled.length<=1){
