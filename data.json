@@ -7,8 +7,8 @@
       {
         "href": "#/",
         "label": {
-          "en": "Work",
-          "kk": "Жұмыстар",
+          "en": "Works",
+          "kk": "таңдаңыз.",
           "ru": "Работы"
         }
       },
@@ -23,7 +23,7 @@
       {
         "href": "#pricing",
         "label": {
-          "en": "Pricing",
+          "en": "Prices",
           "kk": "Бағалар",
           "ru": "Цены"
         }
@@ -31,7 +31,7 @@
       {
         "href": "#contact",
         "label": {
-          "en": "Contact",
+          "en": "Contact Us",
           "kk": "Байланыс",
           "ru": "Контакты"
         }
@@ -77,8 +77,16 @@
       "ru": "Давайте работать {em}вместе{/em}"
     },
     "heroWords": {
-      "en": [],
-      "kk": [],
+      "en": [
+        "RILSY",
+        "STORIES",
+        "SNIPPETS"
+      ],
+      "kk": [
+        "RILSY",
+        "ӘҢГІМЕЛЕР",
+        "БӨЛШЕКТЕР"
+      ],
       "ru": [
         "РИЛСЫ",
         "ИСТОРИИ",
@@ -86,13 +94,13 @@
       ]
     },
     "studioTag": {
-      "en": "",
-      "kk": "",
+      "en": "Our achievements",
+      "kk": "Біздің жетістіктеріміз",
       "ru": "Наши достижения"
     },
     "heroPrefix": {
-      "en": "CRAFTING",
-      "kk": "ТҮСІРЕМІЗ",
+      "en": "SHOOTING FOR YOU",
+      "kk": "СІЗ ҮШІН АТУ",
       "ru": "СНИМАЕМ ДЛЯ ВАС"
     },
     "introWords": [
@@ -101,9 +109,9 @@
       "КАДР"
     ],
     "studioText": {
-      "en": "",
-      "kk": "",
-      "ru": "Наши достижения"
+      "en": "Aesthetics in each pixel.\nProfessional production and post-production for those who value quality.",
+      "kk": "Әрбір пиксельдегі эстетика.\nСапаны бағалайтындар үшін кәсіби өндіріс және кейінгі өндіріс.",
+      "ru": "Эстетика в каждом пикселе.\nПрофессиональный продакшн и пост-продакшн для тех, кто ценит качество"
     },
     "heroTagline": {
       "en": "",
@@ -112,26 +120,26 @@
     },
     "studioStats": [
       {
-        "lbl": "Опыт работы",
-        "num": "3+"
+        "lbl": "Создаем визуальные истории",
+        "num": "3+ года"
       },
       {
-        "lbl": "Проектов закончены",
+        "lbl": "Кейсов от рекламы до снипетов",
         "num": "30+"
       },
       {
-        "lbl": "Крупных Клиентов",
+        "lbl": "Миллионов охвата",
         "num": "+5"
       },
       {
-        "lbl": "Работы",
-        "num": "+2"
+        "lbl": "Внимание к каждому кадру",
+        "num": "100%"
       }
     ],
     "clientsLabel": {
-      "en": "",
-      "kk": "",
-      "ru": ""
+      "en": "Customer",
+      "kk": "Клиенттер ",
+      "ru": "Клиенты"
     },
     "enabledLangs": [
       "ru",
@@ -140,15 +148,24 @@
     "marqueeItems": {
       "en": [
         "BRAND FILMS",
-        "WEDDING FILMS",
-        "MUSIC VIDEOS",
+        "MUSIC VIDEOS;",
         "COMMERCIALS",
         "SHORT FILMS",
-        "CGI · 3D",
-        "COLOR GRADE",
-        "SOUND DESIGN"
+        "COLOR CORRECTION",
+        "SOUND DESIGN",
+        "RILS / REELS",
+        "USER-GENERATED CONTENT"
       ],
-      "kk": [],
+      "kk": [
+        "БРЕНД ФИЛЬМДЕРІ",
+        "МУЗЫКАЛЫҚ БЕЙНЕЛЕР",
+        "ЖАРНАМАЛАР",
+        "ҚЫСҚАМЕТРАЖДЫ ФИЛЬМДЕР",
+        "ТҮС ТҮЗЕТУІ",
+        "ДЫБЫС ДИЗАЙНЫ",
+        "RILS / КАТУШКАЛАР",
+        "UGC-CONTENT"
+      ],
       "ru": [
         "БРЕНД-ФИЛЬМЫ",
         "МУЗЫКАЛЬНЫЕ КЛИПЫ",
