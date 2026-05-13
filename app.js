@@ -435,7 +435,7 @@ function applyLang(lang){
 }
 
 function render(){
-  try{renderNav();renderDpHero();renderGrid();renderMarquee();renderStudioStrip();renderProcess();renderTestimonials();renderAwards();renderPricing();renderFooter();renderClients();renderAbout();renderContactCTAs();renderStructuredData();}catch(e){console.error(e);}
+  try{renderNav();renderDpHero();renderMarquee();renderStudioStrip();renderPricing();renderFooter();renderClients();renderAbout();renderContactCTAs();renderStructuredData();}catch(e){console.error(e);}
 }
 
 function renderStructuredData(){
@@ -2014,12 +2014,6 @@ document.addEventListener("click",e=>{
       }
     }
     return;
-  }
-  // category filter
-  if(e.target.dataset.cat){
-    currentCategory=e.target.dataset.cat;
-    document.querySelectorAll("#filters button").forEach(b=>b.classList.toggle("on",b.dataset.cat===currentCategory));
-    renderGrid();return;
   }
   // admin tabs
   if(e.target.closest("[data-ap]")){
