@@ -1073,9 +1073,39 @@ window.openModal=function(id,srcEl){
       container.classList.add("flip-in");
     });
   }
+  // Авто-скрытие info-overlay через 4с, возврат по тапу — фокус на видео
+  setupInfoAutoHide();
 };
 
+let _infoHideTimer=null;
+function setupInfoAutoHide(){
+  const info=document.querySelector("#project-modal .pm-info-side");
+  if(!info)return;
+  const isMobile=window.matchMedia("(max-width:820px)").matches;
+  if(!isMobile){info.classList.remove("dim");return;}
+  const scheduleHide=()=>{
+    clearTimeout(_infoHideTimer);
+    _infoHideTimer=setTimeout(()=>{info.classList.add("dim");},4000);
+  };
+  const showAgain=()=>{
+    info.classList.remove("dim");
+    scheduleHide();
+  };
+  info.classList.remove("dim");
+  scheduleHide();
+  // Тап по контейнеру модалки (но не по кнопке закрытия) — показывает info
+  const container=document.querySelector("#project-modal .modal-video-container");
+  if(container){
+    container.onclick=(e)=>{
+      if(e.target.closest(".btn-close-video"))return;
+      if(e.target.closest(".pm-info-side"))return;
+      showAgain();
+    };
+  }
+}
+
 function closeModal(){
+  clearTimeout(_infoHideTimer);
   document.querySelectorAll(".modal-backdrop.show").forEach(m=>m.classList.remove("show"));
   const proj=document.getElementById("project-modal");
   const container=proj&&proj.querySelector(".modal-video-container");
