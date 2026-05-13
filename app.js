@@ -769,24 +769,6 @@ function renderDpHero(){
     titleEl.innerHTML=`<span class="dp-title-prefix">${esc(prefix)}</span><span class="dp-title-rotator" id="dp-rotator"></span>`;
     startRotator(words);
   }
-  // Mobile Video Background support
-  const hero = document.querySelector(".dp-hero");
-  if(hero){
-    // Remove existing video bg if any
-    const old = hero.querySelector(".mobile-video-bg"); if(old) old.remove();
-    if(window.innerWidth <= 900){
-      const fp = (DATA.projects||[]).find(x=>x.id===site.featuredId) || (DATA.projects||[])[0];
-      if(fp && fp.videoUrl){
-        const emb = toEmbed(fp.videoUrl);
-        if(emb){
-          const bg = document.createElement("div");
-          bg.className = "mobile-video-bg";
-          bg.innerHTML = `<iframe src="${emb}?autoplay=1&mute=1&loop=1&playlist=${emb.split('/').pop()}&controls=0&background=1&playsinline=1" allow="autoplay; fullscreen"></iframe>`;
-          hero.insertBefore(bg, hero.firstChild);
-        }
-      }
-    }
-  }
   // tagline (gl handles both strings and {en,ru,kk} objects)
   const tagline = gl(site.heroTagline) || ((site.name||"FRAME")+" — REELS PRODUCTION FROM ALMATY, CRAFTING STORIES FOR BRANDS.");
   if(tagEl) tagEl.textContent = tagline;

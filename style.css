@@ -171,9 +171,10 @@
     .dp-track{gap:12px;padding:0 18px}
     .dp-card,.dp-card.v0,.dp-card.v1,.dp-card.v2,.dp-card.v3,.dp-card.v4{height:100%;width:85vw;max-height:none;--ty:0px}
     
-    /* Mobile Video Hero Background */
-    .mobile-video-bg{position:absolute;inset:0;z-index:0;overflow:hidden;opacity:0.4;pointer-events:none}
-    .mobile-video-bg iframe{position:absolute;top:50%;left:50%;width:300%;height:300%;transform:translate(-50%,-50%);border:0}
+    /* Video Focus Modal */
+    .video-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:1000;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .3s}
+    .video-modal-overlay.open{opacity:1}
+    .video-modal-content{width:95vw;aspect-ratio:16/9;background:#000;border-radius:8px;overflow:hidden}
   }
   @media(max-width:480px){
     .dp-hero{grid-template-rows:auto 50vh;padding:70px 0 20px}
@@ -544,8 +545,14 @@
     .contact{padding:60px 14px}
     .price-card{padding:24px 18px;min-height:auto}
     .price-amount .num{font-size:48px}
-    .modal{padding:24px 20px}
-    .modal-video-container{border-radius:0;max-height:100vh}
+    .modal{padding:0;background:#000}
+    .modal-video-container{height:100vh;height:100svh;max-height:none;border-radius:0}
+    .modal-info{padding:30px 20px;background:linear-gradient(to top, #000 0%, transparent 100%);position:absolute;bottom:0;left:0;right:0;z-index:10;pointer-events:none}
+    .modal-info *{pointer-events:all}
+    .modal-name{font-size:32px;color:#fff}
+    .modal-client{font-size:12px;color:rgba(255,255,255,0.7)}
+    .modal-desc{font-size:14px;color:rgba(255,255,255,0.8);max-width:90%}
+    .modal-close{background:rgba(255,255,255,0.2);color:#fff;top:20px;right:20px}
   }
 
   /* PREVIEW HIGHLIGHT — мягкое свечение секции при переходе из админки */
